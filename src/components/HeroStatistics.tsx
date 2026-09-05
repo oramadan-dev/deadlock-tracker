@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react'
-import { listRanks, loadStatistics, type StatisticsData } from '../services/statistics'
+import { useEffect, useRef, useState } from 'react'
+import { listRanks, loadSeasonStart, loadStatistics, type StatisticsData } from '../services/statistics'
 import { defaults, metrics, topRows, type MetricId, type Preferences } from '../statistics'
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'success', data: StatisticsData }
 
 function StatisticsResults({ preferences, retry, sort }: { preferences: Preferences, retry: () => void, sort: (metric: MetricId) => void }) {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
-  const { days, minRank, maxRank, matchMode } = preferences
+  const { date, minRank, maxRank, matchMode } = preferences
   useEffect(() => {
     const controller = new AbortController()
-    const timer = window.setTimeout(() => loadStatistics({ days, minRank, maxRank, matchMode }, controller.signal).then(
+    const timer = window.setTimeout(() => loadStatistics({ date, minRank, maxRank, matchMode }, controller.signal).then(
       (data) => { if (!controller.signal.aborted) setState({ status: 'success', data }) },
       () => { if (!controller.signal.aborted) setState({ status: 'error' }) },
     ), 250)
     return () => { window.clearTimeout(timer); controller.abort() }
-  }, [days, minRank, maxRank, matchMode])
+  }, [date, minRank, maxRank, matchMode])
 
   if (state.status === 'loading') return <p role="status">Loading hero statistics…</p>
   if (state.status === 'error') return <div role="status"><p>Couldn’t load hero statistics.</p><button type="button" className="theme-toggle" onClick={retry}>Retry</button></div>
@@ -69,6 +69,39 @@ export function HeroStatistics() {
   const [preferences, setPreferences] = useState<Preferences>(defaults)
   const [draftRanks, setDraftRanks] = useState({ minRank: defaults.minRank, maxRank: defaults.maxRank })
   const [ranks, setRanks] = useState<Awaited<ReturnType<typeof listRanks>>>([])
+  const [seasonStart, setSeasonStart] = useState<number | null>(null)
+  const [seasonError, setSeasonError] = useState(false)
+  const [seasonAttempt, setSeasonAttempt] = useState(0)
+  const rankButton = useRef<HTMLButtonElement>(null)
+  const rankPopup = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    loadSeasonStart(controller.signal).then(
+      (start) => { if (!controller.signal.aborted) { setSeasonStart(start); setSeasonError(false) } },
+      () => { if (!controller.signal.aborted) setSeasonError(true) },
+    )
+    return () => controller.abort()
+  }, [seasonAttempt])
+  useEffect(() => {
+    const popup = rankPopup.current
+    function position() {
+      const button = rankButton.current
+      if (!popup || !button || !popup.matches(':popover-open')) return
+      const rect = button.getBoundingClientRect()
+      const height = popup.offsetHeight
+      const top = rect.bottom + 8 + height <= window.innerHeight - 8 ? rect.bottom + 8 : Math.max(8, rect.top - height - 8)
+      popup.style.top = top + 'px'
+      popup.style.left = Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - popup.offsetWidth - 8)) + 'px'
+    }
+    popup?.addEventListener('toggle', position)
+    window.addEventListener('resize', position)
+    window.addEventListener('scroll', position, true)
+    return () => {
+      popup?.removeEventListener('toggle', position)
+      window.removeEventListener('resize', position)
+      window.removeEventListener('scroll', position, true)
+    }
+  }, [])
   const [rankError, setRankError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
@@ -95,7 +128,7 @@ export function HeroStatistics() {
     onBlur: commitRanks,
   }
   const retry = () => setAttempt((value) => value + 1)
-  const requestKey = `${preferences.days}:${preferences.minRank}:${preferences.maxRank}:${preferences.matchMode}:${attempt}`
+  const requestKey = `${JSON.stringify(preferences.date)}:${preferences.minRank}:${preferences.maxRank}:${preferences.matchMode}:${attempt}`
   const rankName = (tier: number) => ranks.find((rank) => rank.tier === tier)?.name ?? 'Tier ' + tier
   const rankSummary = preferences.minRank === preferences.maxRank ? rankName(preferences.minRank)
     : preferences.maxRank === 11 ? rankName(preferences.minRank) + '+'
@@ -107,9 +140,8 @@ export function HeroStatistics() {
     <section className="hero-statistics" aria-labelledby="statistics-title">
       <div className="statistics-heading"><h1 id="statistics-title">Top heroes</h1><button type="button" className="theme-toggle" onClick={reset}>Reset</button></div>
       <div className="statistics-controls">
-        <button type="button" className="theme-toggle" popoverTarget="rank-popup" aria-label={"Edit average match rank: " + rankSummary}>{rankSummary} <span aria-hidden="true">▾</span></button>
-        <div id="rank-popup" className="rank-popup" popover="auto">
-        <div className="rank-popup-heading"><strong>Average match rank</strong><button type="button" className="theme-toggle" popoverTarget="rank-popup" popoverTargetAction="hide" aria-label="Close rank selector">✕</button></div>
+        <button ref={rankButton} type="button" className="theme-toggle" popoverTarget="rank-popup" aria-label={"Edit average match rank: " + rankSummary}>{rankSummary} <span aria-hidden="true">▾</span></button>
+        <div ref={rankPopup} id="rank-popup" className="rank-popup" popover="auto" aria-label="Average match rank">
         <fieldset className="rank-filter">
           <legend className="visually-hidden">Average match rank</legend>
           <div className="rank-labels"><span>{ranks.find((rank) => rank.tier === draftRanks.minRank)?.name ?? 'Tier ' + draftRanks.minRank}</span><span>{ranks.find((rank) => rank.tier === draftRanks.maxRank)?.name ?? 'Tier ' + draftRanks.maxRank}</span></div>
@@ -129,9 +161,18 @@ export function HeroStatistics() {
           </span>)}</div>
         </fieldset>
         </div>
+        <fieldset className="radio-filter"><legend>Date</legend>
+          {([7, 30] as const).map((days) => <label key={days}><input type="radio" name="statistics-date" checked={preferences.date.kind === 'rolling' && preferences.date.days === days} onChange={() => update({ date: { kind: 'rolling', days } })} />{days} days</label>)}
+          {seasonStart !== null && <label><input type="radio" name="statistics-date" checked={preferences.date.kind === 'season'} onChange={() => update({ date: { kind: 'season', start: seasonStart } })} />Season to date</label>}
+        </fieldset>
+        <fieldset className="radio-filter"><legend>Matches</legend>
+          <label><input type="radio" name="statistics-matches" checked={preferences.matchMode === 'ranked'} onChange={() => update({ matchMode: 'ranked' })} />Ranked only</label>
+          <label title="Ranked and unranked"><input type="radio" name="statistics-matches" checked={preferences.matchMode === 'ranked,unranked'} onChange={() => update({ matchMode: 'ranked,unranked' })} />All</label>
+        </fieldset>
       </div>
+      {seasonError && <p role="status">Season dates unavailable. <button type="button" className="theme-toggle" onClick={() => setSeasonAttempt((value) => value + 1)}>Retry season dates</button></p>}
       {rankError && <p role="status">Rank names unavailable. <button type="button" className="theme-toggle" onClick={retry}>Retry</button></p>}
-      <p className="statistics-note">Last 7 days · Ranked · At least 100 appearances · {preferences.direction === 'desc' ? 'Highest first' : 'Lowest first'}</p>
+      <p className="statistics-note">{preferences.date.kind === 'rolling' ? 'Last ' + preferences.date.days + ' days' : 'Season to date'} · {preferences.matchMode === 'ranked' ? 'Ranked' : 'Ranked + unranked'} · At least 100 appearances · {preferences.direction === 'desc' ? 'Highest first' : 'Lowest first'}</p>
       <StatisticsResults key={requestKey} preferences={preferences} retry={retry} sort={sort} />
     </section>
   )

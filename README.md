@@ -26,14 +26,19 @@ statistics calculation and request tests. No additional test framework is used.
 ## Home-page statistics
 
 `src/services/statistics.ts` uses the installed client's hero, ban, game, and
-rank endpoints. The default view ranks five active heroes by win rate over seven
+rank and ranked-season endpoints. The default view ranks five active heroes by win rate over seven
 days of ranked normal games, with average team badges from Phantom I (91)
 through Eternus VI (116) and at least 100 hero appearances. Date bounds end at
 the latest full hour to reuse cached API results. Rank, time, and match filters
 are shared across requests. A compact rank summary opens the two-handle slider,
 with integer rank notches and API rank icons. Rank range and header sorting reset on refresh or with the Reset button; clicking a header again reverses sorting. Average K/D/A sorts
-by aggregate (kills + assists) / deaths. The time window, ranked match type,
-100-appearance minimum, and default columns are fixed. No table settings are persisted.
+by aggregate (kills + assists) / deaths. Date radio controls offer 7 days, 30 days,
+and season to date when the API supplies an active season interval. Overlapping
+intervals use the latest start; missing season metadata does not block statistics.
+Matches offers ranked only or ranked + unranked, retaining average-rank filters.
+The rank popup is anchored below its button and flips above if needed; dragging
+only commits on release. Reset and refresh restore all filters to defaults. The
+100-appearance minimum and default columns are fixed. No table settings are persisted.
 
 Win rate is wins / hero appearances. Pick rate is hero appearances / filtered
 games. Recorded ban percentage is recorded bans / filtered games; incomplete

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { calculateRows, defaults, topRows } from '../src/statistics.ts'
-import { loadStatistics } from '../src/services/statistics.ts'
+import { activeSeasonStart, dateBounds, loadStatistics } from '../src/services/statistics.ts'
 import { AnalyticsApi } from 'deadlock_api_client/apis/analytics-api'
 import { HeroesApi } from 'deadlock_api_client/apis/heroes-api'
 
@@ -77,4 +77,40 @@ test('service shares filters, tolerates supplemental failures and rejects aborte
   controller.abort()
   release()
   await assert.rejects(stale, { name: 'AbortError' })
+})
+
+
+test('date windows and active season boundaries', () => {
+  const now = 2000000000000
+  for (const days of [7, 30]) {
+    const bounds = dateBounds({ kind: 'rolling', days }, now)
+    assert.equal(bounds.maxUnixTimestamp - bounds.minUnixTimestamp, days * 86400)
+    assert.equal(bounds.maxUnixTimestamp % 3600, 0)
+  }
+  const seasons = [{ intervals: [
+    { start_timestamp: 10, end_timestamp: 50 },
+    { start_timestamp: 20, end_timestamp: 40 },
+    { start_timestamp: 60, end_timestamp: 80 },
+  ] }]
+  assert.equal(activeSeasonStart(seasons, 30), 20)
+  assert.equal(activeSeasonStart(seasons, 40), 10)
+  assert.equal(activeSeasonStart(seasons, 50), null)
+  assert.equal(activeSeasonStart(seasons, 5), null)
+  assert.equal(activeSeasonStart([], 30), null)
+  assert.equal(dateBounds({ kind: 'season', start: 20 }, now).minUnixTimestamp, 20)
+})
+
+test('all matches and season dates are identical across analytics requests', async (t) => {
+  const requests = []
+  t.mock.method(HeroesApi.prototype, 'listHeroes', async () => ({ data: [] }))
+  for (const method of ['heroStats', 'heroBanStats', 'gameStats']) {
+    t.mock.method(AnalyticsApi.prototype, method, async (query) => { requests.push(query); return { data: [] } })
+  }
+  await loadStatistics({ ...defaults, date: { kind: 'season', start: 1785430800 }, matchMode: 'ranked,unranked' }, new AbortController().signal)
+  assert.equal(requests.length, 3)
+  for (const query of requests) {
+    assert.equal(query.matchMode, 'ranked,unranked')
+    assert.equal(query.minUnixTimestamp, 1785430800)
+    assert.equal(query.maxUnixTimestamp, requests[0].maxUnixTimestamp)
+  }
 })

@@ -1,14 +1,18 @@
 import { AnalyticsApi } from 'deadlock_api_client/apis/analytics-api'
 import { RanksApi } from 'deadlock_api_client/apis/ranks-api'
+import { RankedSeasonsApi } from 'deadlock_api_client/apis/ranked-seasons-api'
+import type { RankedSeason } from 'deadlock_api_client/models/ranked-season'
 import type { AnalyticsHeroStats } from 'deadlock_api_client/models/analytics-hero-stats'
 import type { HeroBanStats } from 'deadlock_api_client/models/hero-ban-stats'
 import { listHeroes, type HeroSummary } from './heroes.ts'
 
+export type DateSelection = { kind: 'rolling', days: 7 | 30 } | { kind: 'season', start: number }
+
 export type StatisticsFilters = {
-  days: number
+  date: DateSelection
   minRank: number
   maxRank: number
-  matchMode: string
+  matchMode: 'ranked' | 'ranked,unranked'
 }
 
 export type StatisticsData = {
@@ -21,6 +25,25 @@ export type StatisticsData = {
 
 const analytics = new AnalyticsApi()
 const ranks = new RanksApi()
+const seasons = new RankedSeasonsApi()
+
+export function activeSeasonStart(data: RankedSeason[], now = Date.now() / 1000): number | null {
+  const starts = data.flatMap((season) => season.intervals)
+    .filter((interval) => Number.isFinite(interval.start_timestamp) && interval.start_timestamp <= now && now < interval.end_timestamp)
+    .map((interval) => interval.start_timestamp)
+  return starts.length ? Math.max(...starts) : null
+}
+
+export async function loadSeasonStart(signal: AbortSignal) {
+  const { data } = await seasons.listRankedSeasons({ language: 'english' }, { signal, timeout: 15000 })
+  return activeSeasonStart(data)
+}
+
+export function dateBounds(date: DateSelection, now = Date.now()) {
+  const end = Math.floor(now / 3600000) * 3600
+  return { minUnixTimestamp: date.kind === 'rolling' ? end - date.days * 86400 : date.start,
+    maxUnixTimestamp: date.kind === 'season' ? Math.max(end, date.start) : end }
+}
 
 export async function listRanks(signal: AbortSignal) {
   const { data } = await ranks.listRanks({ language: 'english' }, { signal, timeout: 15000 })
@@ -29,12 +52,10 @@ export async function listRanks(signal: AbortSignal) {
 
 export async function loadStatistics(filters: StatisticsFilters, signal: AbortSignal): Promise<StatisticsData> {
   // Round to the hour so identical requests can benefit from the API cache.
-  const end = Math.floor(Date.now() / 3600000) * 3600
   const common = {
     bucket: 'no_bucket' as const,
     matchMode: filters.matchMode,
-    minUnixTimestamp: end - filters.days * 86400,
-    maxUnixTimestamp: end,
+    ...dateBounds(filters.date),
     minAverageBadge: filters.minRank * 10 + 1,
     maxAverageBadge: filters.maxRank * 10 + 6,
   }
