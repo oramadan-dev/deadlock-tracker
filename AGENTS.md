@@ -24,6 +24,39 @@ Do not add a framework, state library, router, styling system, test framework,
 or API client unless the task requires it. Prefer the platform and existing
 dependencies when they are sufficient.
 
+## Visual direction
+
+Use this colorway consistently through shared CSS custom properties:
+
+- Ink: `#000000` / `rgb(0, 0, 0)`
+- Navy: `#233D4D` / `rgb(35, 61, 77)`
+- Orange: `#FE7F2D` / `rgb(254, 127, 45)`
+- Mist: `#EAECF0` / `rgb(234, 236, 240)`
+
+In light mode, use mist as the page background, navy for structure and text, and
+orange for primary actions. In dark mode, swap the orange and navy roles: use
+orange for the main surface and strong visual structure, and navy for actions
+and compact accents. Ink remains the dark foundation and mist remains the main
+text color. Keep contrast accessible and do not introduce additional brand
+colors without a product need.
+
+Favor a sparse, product-first interface. Avoid marketing headlines, slogans,
+feature-summary panels, and placeholder explanatory copy. The initial page
+should expose the app identity, theme control, and player search without filler.
+
+The interface supports dark and light themes. Dark mode is the default; an
+explicit visitor selection is persisted locally and takes precedence on later
+visits. Define both themes through semantic CSS custom properties and verify new
+UI in both modes. Keep the theme control keyboard-accessible and accurately
+labelled for assistive technology.
+
+The display typeface is the locally hosted VALVe Pulp Bold file at
+`src/assets/fonts/valve-pulp-bold.ttf`, sourced from the Deadlock Graphical
+Library. Declare it once with `@font-face` and use the `Valve Pulp` family for
+headings, labels, navigation, and compact controls. Use the system sans-serif
+stack for longer body copy and dense data so it remains easy to read. Do not
+load the font from a third-party URL at runtime.
+
 ## Commands
 
 - `npm run dev`: start the local Vite development server

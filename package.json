@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "deadlock_api_client": "github:deadlock-api/openapi-clients#path:/typescript",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
