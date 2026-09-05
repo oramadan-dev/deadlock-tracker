@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HeroCarousel } from './components/HeroCarousel'
 import './App.css'
 
 type Theme = 'dark' | 'light'
@@ -37,6 +38,7 @@ function App() {
       </header>
 
       <main className="main-content">
+        <HeroCarousel />
         <form className="player-search" action="#" onSubmit={(event) => event.preventDefault()}>
           <label className="visually-hidden" htmlFor="player-name">Find a player</label>
           <input
