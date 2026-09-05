@@ -72,5 +72,5 @@ export function topRows(data: StatisticsData, preferences: Preferences) {
       const difference = left !== null && right !== null ? left - right : 0
       return difference * (preferences.direction === 'asc' ? 1 : -1)
         || (b.values.matches ?? 0) - (a.values.matches ?? 0) || a.hero.id - b.hero.id
-    }).slice(0, 5)
+    })
 }

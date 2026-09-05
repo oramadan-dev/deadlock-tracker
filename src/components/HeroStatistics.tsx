@@ -138,7 +138,6 @@ export function HeroStatistics() {
   }
   return (
     <section className="hero-statistics" aria-labelledby="statistics-title">
-      <div className="statistics-heading"><h1 id="statistics-title">Top heroes</h1><button type="button" className="theme-toggle" onClick={reset}>Reset</button></div>
       <div className="statistics-controls">
         <button ref={rankButton} type="button" className="theme-toggle" popoverTarget="rank-popup" aria-label={"Edit average match rank: " + rankSummary}>{rankSummary} <span aria-hidden="true">▾</span></button>
         <div ref={rankPopup} id="rank-popup" className="rank-popup" popover="auto" aria-label="Average match rank">
