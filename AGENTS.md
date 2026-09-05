@@ -62,6 +62,7 @@ load the font from a third-party URL at runtime.
 - `npm run dev`: start the local Vite development server
 - `npm run build`: type-check and create a production build
 - `npm run lint`: lint the repository
+- `npm test`: run synthetic statistics and service tests using Node 22.18+ native TypeScript support
 - `npm run preview`: serve the production build locally
 
 Run both `npm run lint` and `npm run build` after code changes. If either cannot
@@ -76,6 +77,9 @@ run, state why in the handoff.
   behavior into hooks or plain modules only when reuse or complexity warrants it.
 - Keep API access behind a small service boundary so components do not depend on
   transport details.
+- Home-page analytics use `src/services/statistics.ts`; metric calculations live in `src/statistics.ts`. Keep rank/date/match filters
+  aligned across endpoints and distinguish recorded ban percentage from full
+  ban coverage.
 - Represent loading, empty, error, and success states explicitly for data-driven
   views.
 - Use semantic HTML and accessible names. Interactive behavior must work with a

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HeroCarousel } from './components/HeroCarousel'
+import { HeroStatistics } from './components/HeroStatistics'
 import './App.css'
 
 type Theme = 'dark' | 'light'
@@ -50,6 +51,7 @@ function App() {
           />
           <button type="submit">Search</button>
         </form>
+        <HeroStatistics />
       </main>
     </div>
   )
