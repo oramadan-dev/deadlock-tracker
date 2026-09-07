@@ -3,14 +3,11 @@
 ## Project overview
 
 Deadlock Tracker is a React and TypeScript application for exploring Deadlock
-players and their match data. Planned capabilities include account selection,
-player profiles, match history, frequently encountered teammates, hero
-preferences and win rates, KDA statistics, and item usage overall and by hero.
-
-The application will eventually consume an open-source TypeScript client for a
-Deadlock API. Do not invent API shapes or commit placeholder production data as
-if it came from the service. Confirm the client and its types before building an
-integration.
+players, hero statistics, recorded match history, teammates, and match overviews.
+It uses the installed open-source TypeScript package `deadlock_api_client`.
+Do not invent API shapes or commit placeholder production data as if it came
+from the service. Confirm installed client types before changing an integration;
+runtime-validate endpoints whose generated response types are incomplete.
 
 ## Technology
 
@@ -65,8 +62,10 @@ load the font from a third-party URL at runtime.
 - `npm test`: run synthetic statistics and service tests using Node 22.18+ native TypeScript support
 - `npm run preview`: serve the production build locally
 
-Run both `npm run lint` and `npm run build` after code changes. If either cannot
-run, state why in the handoff.
+After code changes, run `npm run lint`, `npm test`, and `npm run build`. Fix
+introduced failures without weakening rules or tests. Report any command that
+cannot run and distinguish pre-existing failures from regressions. Documentation-
+only edits do not require rebuilding the application.
 
 ## Code conventions
 
@@ -124,41 +123,70 @@ run, state why in the handoff.
 
 ## Frontend component organization
 
-`PlayerDashboard.tsx` coordinates the dashboard; `PlayerDetails.tsx` owns its
-hero, match, and teammate views. Shared player display components live in
-`PlayerPresentation.tsx`. Keep hero row calculations and deterministic sorting
-in `player.ts`. Resource loaders must retain stable identities until their
-request inputs change; hidden tab panels deliberately remain mounted.
+Group TSX, CSS, and private subcomponents by owner under `src/components`:
 
-- Prefer organizing substantial components and their styles by feature rather
-  than accumulating unrelated application UI in large shared TSX or CSS files.
-  Split files when they contain multiple meaningful responsibilities, but keep
-  tightly coupled code together and avoid fragmentation into trivial files.
+| Folder | Ownership |
+| --- | --- |
+| `HeroCarousel/` | Active-hero carousel and its stylesheet |
+| `HeroStatistics/` | Home coordination, `RankSelector`, `StatisticsResults`, and home styles |
+| `PlayerSearch/` | Search, candidate selection, and search styles |
+| `PlayerDashboard/` | Dashboard coordination, `PlayerDetails`, `PlayerProfile`, `PlayerPresentation`, and player styles |
+| `MatchOverview/` | Dialog, scoreboard hydration, team tables, and overview styles |
+| `DataDisplay/` | Shared `StatisticsFilters`, `PercentageBar`, `MatchTags`, and data-display styles |
 
-When working with the existing CSS:
+Use direct file imports rather than barrel exports. Keep substantial domain
+calculations in `src/player.ts` and `src/statistics.ts`, including deterministic
+hero sorting and metric formatting. Do not move shared service or domain modules
+into a component folder merely because one component currently uses them.
 
-- Organize substantial styles by component or feature rather than accumulating
-  unrelated application styles in a single global stylesheet.
-- Keep global CSS limited primarily to theme tokens, resets, typography, and
-  genuinely application-wide primitives.
-- Keep selectors simple and predictable.
-- Reuse existing semantic CSS custom properties and design tokens.
-- Consolidate duplicate or scattered rules for the same component when practical.
-- Avoid unnecessary selector specificity and deeply coupled selectors.
-- Prefer class names that describe component or element purpose rather than
-  visual appearance.
-- Avoid static inline styles. Use inline styles only for values that are
-  genuinely dynamic at runtime.
-- Remove unused and duplicate CSS when it is safe to do so.
-- Keep responsive rules close to the component styles they modify when practical.
-Home statistics compose `RankSelector`, `StatisticsFilters`, and
-`StatisticsResults`. Date/match controls and `PercentageBar` are shared with the
-player dashboard. Profile/summary presentation lives in `PlayerProfile.tsx`.
-Keep feature styles beside components, shared data-view styles in
-`components/DataDisplay/DataDisplay.css`, and application-wide styles in `App.css`.
-`App.tsx` defines their import order so feature overrides follow shared rules.
+Prefer simple, explicit code and named prop types. Extract recognizable UI
+concepts rather than tiny wrappers. Keep page components focused on composition,
+high-level state, and coordination; avoid generic helper dumping grounds.
 
-Within `src/components`, keep each feature's TSX, CSS, and private subcomponents
-in its named folder (`HeroCarousel`, `HeroStatistics`, `PlayerSearch`,
-`PlayerDashboard`, or `MatchOverview`). Cross-feature display components and
-styles belong to `DataDisplay`. Use direct file imports rather than barrels.
+### State and interaction invariants
+
+- `useResource` identifies requests by loader identity and retry attempt. Keep
+  callbacks stable until request inputs change; changing identity starts a load.
+  Account selection seeds initial analytics to avoid fetching them twice.
+- Superseded searches and section requests must be cancelled, and stale responses
+  must not replace newer selections. Supplemental failures preserve usable data.
+- Hidden player tab panels deliberately stay mounted to preserve pagination and
+  sorting. Tab switches do not refetch. Filter/reset keys deliberately reset
+  table state; account selection and Reset default to Recent matches.
+- Rank slider drafts belong to `RankSelector`. Commit on pointer release,
+  supported keyboard key release, or blur; preserve pointer-cancel recovery.
+  The native popover remains anchored and supports outside-click and Escape.
+- Home and player dates default to All time. Home defaults to Phantom+ ranked;
+  player filters independently default to ranked + unranked normal games.
+  Filters and identity stay in memory; theme selection alone is persisted.
+- Preserve API-backed season selection, metric denominators, missing-value
+  handling, historical player heroes, and the teammates match-type exception.
+  A structural refactor must not silently change these product semantics.
+
+### Stylesheet ownership
+
+`src/App.css` contains font declarations, theme tokens, resets, shell/header
+layout, shared button styling, and accessibility utilities. Feature styles live
+beside their components; shared tables, meters, tags, and result styles live in
+`src/components/DataDisplay/DataDisplay.css`.
+
+`src/App.tsx` explicitly imports CSS in this order: global, DataDisplay,
+HeroCarousel, PlayerSearch, HeroStatistics, PlayerDashboard, MatchOverview.
+Preserve the cascade when moving rules. These are plain global stylesheets,
+not CSS Modules; keep selectors predictable and avoid unnecessary specificity.
+
+- Consolidate duplicate rules only after checking responsive overrides.
+- Keep responsive rules with their owning feature and preserve reduced motion.
+- Use existing semantic tokens and verify both themes for UI/style changes.
+- Use inline styles only for runtime values, such as slider positions and rates.
+- Do not introduce a styling system or dependency solely to reorganize files.
+
+## Known validation discrepancy
+
+At the latest verification on 2026-09-07, lint and production build passed;
+22 tests passed and one existing test failed. `recordedMvpTag` currently maps
+`mvp_rank` 1 to MVP and 2/3 to Key Player, while
+`tests/matchOverview.test.mjs` expects literal MVP rank labels. This also
+conflicts with the recorded-rank guidance above. Treat this as an unresolved
+data-semantics decision, not permission to weaken the test or silently change
+labels during unrelated refactoring. Recheck and update this note when resolved.
