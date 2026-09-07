@@ -121,3 +121,11 @@ run, state why in the handoff.
   expectations materially change.
 - Do not modify generated output such as `dist/` or dependency contents in
   `node_modules/`.
+
+## Frontend component organization
+
+`PlayerDashboard.tsx` coordinates the dashboard; `PlayerDetails.tsx` owns its
+hero, match, and teammate views. Shared player display components live in
+`PlayerPresentation.tsx`. Keep hero row calculations and deterministic sorting
+in `player.ts`. Resource loaders must retain stable identities until their
+request inputs change; hidden tab panels deliberately remain mounted.

@@ -98,3 +98,24 @@ test('superseded player and name requests reject even when transport resolves af
     await assert.rejects(request, { name: 'AbortError' })
   }
 })
+
+test('hero performance joins by identity, preserves missing details, and sorts deterministically', async () => {
+  const { buildHeroPerformanceRows } = await import('../src/player.ts')
+  const hero = (id, games, deaths) => ({ hero_id: id, matches: games, wins: 2, total_kills: 6, total_assists: 4, total_deaths: deaths })
+  const stats = [hero(9, 4, 0), hero(3, 4, 2), hero(2, 4, 2), hero(1, 8, 4)]
+  const details = [{ hero_id: 3, time_played: 120, last_played: 50 }]
+  const heroes = [{ id: 3, name: 'Historical hero' }]
+  const rows = buildHeroPerformanceRows(stats, details, heroes, { key: 'kda', direction: 'desc' })
+  assert.deepEqual(rows.map((row) => row.stat.hero_id), [2, 3, 1, 9])
+  assert.equal(rows[1].hero, 'Historical hero')
+  assert.equal(rows[1].time, 120)
+  assert.equal(rows[1].last, 50)
+  assert.equal(rows[0].hero, 'Hero 2')
+  assert.equal(rows[0].time, null)
+  assert.equal(rows[0].winRate, 0.5)
+  assert.equal(rows[3].kda, null)
+  const ascending = buildHeroPerformanceRows(stats, null, heroes, { key: 'kda', direction: 'asc' })
+  assert.deepEqual(ascending.map((row) => row.stat.hero_id), [1, 2, 3, 9])
+  assert.deepEqual(stats.map((row) => row.hero_id), [9, 3, 2, 1])
+  assert.deepEqual(buildHeroPerformanceRows([], null, [], { key: 'games', direction: 'desc' }), [])
+})

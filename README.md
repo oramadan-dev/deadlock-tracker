@@ -3,14 +3,6 @@
 A React and TypeScript application for exploring Deadlock player profiles, match
 history, teammates, hero performance, and item usage.
 
-The home page loads hero names and portraits through the installed
-`deadlock_api_client` (`HeroesApi.listHeroes`, `/v1/assets/heroes`). API access
-lives in `src/services/heroes.ts`. The carousel requests `onlyActive: true` to
-exclude unselectable, disabled, or in-development heroes, and displays a fallback
-when a portrait is missing.
-Rotation pauses on hover or keyboard focus; reduced-motion users can scroll
-the row manually.
-
 ## Development
 
 ```sh
@@ -141,3 +133,93 @@ failures do not hide the scoreboard. Player histories are fetched with three
 workers, with global baselines shared across participants; existing tag eligibility
 rules apply. Optional mvp_rank is displayed verbatim as MVP rank N in history and
 the overview. No MVP winner or Key player mapping is inferred from this number.
+
+## Readability and maintainability
+
+Optimize application code for human readability and long-term maintainability.
+Prefer straightforward, explicit code over cleverness, compactness, or
+abstraction for its own sake.
+
+- Simplify before abstracting. Do not introduce abstractions solely to reduce
+  line count or eliminate small amounts of duplication.
+- Prefer descriptive, domain-specific names over generic names such as `data`,
+  `item`, `value`, `handler`, or `utils` when a more meaningful name exists.
+- Prefer readable intermediate variables and named functions over dense
+  expressions, deeply chained transformations, or nested callbacks.
+- Use guard clauses when they make control flow easier to follow.
+- Keep functions conceptually focused, but do not split simple logic into many
+  tiny functions solely to satisfy a size rule.
+- Extract React components when they represent a meaningful UI concept,
+  encapsulate reusable behavior, or substantially simplify their parent. Do not
+  componentize trivial markup merely to reduce component length.
+- Avoid unnecessary `useEffect`, `useMemo`, and `useCallback`. Derive values
+  directly during render when practical rather than synchronizing derived state.
+- Keep substantial calculations and domain logic out of JSX. Avoid nested
+  ternaries and complex inline expressions.
+- Keep state as local as practical. Extract custom hooks when stateful behavior
+  has a meaningful boundary or genuine reuse.
+- Keep tightly related code together. Do not create one-file-per-function or
+  one-file-per-component structures unnecessarily.
+- Prefer feature and domain ownership over generic `utils`, `helpers`, or
+  `common` modules. Shared abstractions should have a real shared use case.
+- Do not introduce service, repository, manager, factory, or similar layers
+  unless they solve an actual architectural problem.
+- Comments should explain why, constraints, invariants, or non-obvious behavior.
+  Do not add comments that merely restate the code.
+- Preserve existing behavior and visual appearance during refactors unless the
+  task explicitly requests a behavioral or design change.
+- Remove dead code, obsolete comments, debugging code, unused imports, and
+  redundant indirection when encountered during relevant changes.
+
+### Styling and dependencies
+
+The project currently uses plain CSS with shared CSS custom properties. Preserve
+this approach when it remains clear and maintainable, but do not treat the
+current implementation as a permanent architectural constraint.
+
+Prefer the existing stack and dependencies when they are sufficient. New
+dependencies, including component libraries, styling systems, state libraries,
+routers, test frameworks, or API clients, are acceptable when they provide a
+clear product or maintainability benefit.
+
+A different styling approach such as CSS Modules, Tailwind, or a component
+library may be appropriate when it meaningfully improves consistency,
+maintainability, accessibility, or developer experience.
+
+Do not introduce a dependency merely to replace simple code that is already
+clear and maintainable. Significant dependency or architectural changes should
+have a concrete justification and should be kept separate from unrelated
+refactoring when practical.
+
+When working with the existing CSS:
+
+- Organize styles around components and features.
+- Keep selectors simple and predictable.
+- Reuse existing semantic CSS custom properties and design tokens.
+- Avoid unnecessary selector specificity and deeply coupled selectors.
+- Prefer class names that describe component or element purpose rather than
+  visual appearance.
+- Avoid static inline styles. Use inline styles only for values that are
+  genuinely dynamic at runtime.
+- Remove unused and duplicate CSS when it is safe to do so.
+- Keep responsive behavior understandable and close to the styles it affects
+  where practical.
+### Frontend code map
+
+- `PlayerDashboard.tsx` coordinates filters, independent resources, profile and
+  summary presentation, and tab selection. Panels stay mounted when hidden;
+  filter/reset keys intentionally reset their local table state.
+- `PlayerDetails.tsx` owns hero performance, recent-match pagination and overview
+  selection, and the teammate list. `PlayerPresentation.tsx` holds the small
+  display components shared by those views and the dashboard.
+- `player.ts` builds and sorts hero rows, calculates player totals, parses
+  identities, filters recorded history, and formats player metrics.
+- `useResource` identifies each request by loader identity and retry attempt.
+  Keep request callbacks stable: changing them intentionally starts a new load.
+  Initial analytics are seeded from account selection to avoid duplicate loads.
+- `services/matches.ts` keeps participant tag loading separate from its bounded
+  worker loop and shares baseline requests by match mode. Partial failures and
+  abort checks remain independent of scoreboard metadata.
+- `App.css` retains the existing cascade and semantic theme tokens, with feature
+  headings and expanded declarations. No styling or state dependency is needed
+  for these boundaries.
