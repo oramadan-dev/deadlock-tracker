@@ -129,3 +129,36 @@ hero, match, and teammate views. Shared player display components live in
 `PlayerPresentation.tsx`. Keep hero row calculations and deterministic sorting
 in `player.ts`. Resource loaders must retain stable identities until their
 request inputs change; hidden tab panels deliberately remain mounted.
+
+- Prefer organizing substantial components and their styles by feature rather
+  than accumulating unrelated application UI in large shared TSX or CSS files.
+  Split files when they contain multiple meaningful responsibilities, but keep
+  tightly coupled code together and avoid fragmentation into trivial files.
+
+When working with the existing CSS:
+
+- Organize substantial styles by component or feature rather than accumulating
+  unrelated application styles in a single global stylesheet.
+- Keep global CSS limited primarily to theme tokens, resets, typography, and
+  genuinely application-wide primitives.
+- Keep selectors simple and predictable.
+- Reuse existing semantic CSS custom properties and design tokens.
+- Consolidate duplicate or scattered rules for the same component when practical.
+- Avoid unnecessary selector specificity and deeply coupled selectors.
+- Prefer class names that describe component or element purpose rather than
+  visual appearance.
+- Avoid static inline styles. Use inline styles only for values that are
+  genuinely dynamic at runtime.
+- Remove unused and duplicate CSS when it is safe to do so.
+- Keep responsive rules close to the component styles they modify when practical.
+Home statistics compose `RankSelector`, `StatisticsFilters`, and
+`StatisticsResults`. Date/match controls and `PercentageBar` are shared with the
+player dashboard. Profile/summary presentation lives in `PlayerProfile.tsx`.
+Keep feature styles beside components, shared data-view styles in
+`components/DataDisplay/DataDisplay.css`, and application-wide styles in `App.css`.
+`App.tsx` defines their import order so feature overrides follow shared rules.
+
+Within `src/components`, keep each feature's TSX, CSS, and private subcomponents
+in its named folder (`HeroCarousel`, `HeroStatistics`, `PlayerSearch`,
+`PlayerDashboard`, or `MatchOverview`). Cross-feature display components and
+styles belong to `DataDisplay`. Use direct file imports rather than barrels.

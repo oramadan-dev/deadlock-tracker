@@ -103,7 +103,7 @@ lower side's total gives Won lane / Lost lane; otherwise Even lane. Missing
 snapshots or ambiguous sides produce no lane tag. This estimates lane outcomes;
 assigned lanes cannot establish actual swaps, rotations or individual credit.
 Calculations and validation live in src/matchTags.ts; presentation lives in
-src/components/MatchTags.tsx. No metadata or personal data is persisted.
+src/components/DataDisplay/MatchTags.tsx. No metadata or personal data is persisted.
 
 Frequent teammates use PlayersApi.mateStats with the selected dates, normal game
 mode and sameParty=false. They include all match types because the endpoint has
@@ -220,6 +220,62 @@ When working with the existing CSS:
 - `services/matches.ts` keeps participant tag loading separate from its bounded
   worker loop and shares baseline requests by match mode. Partial failures and
   abort checks remain independent of scoreboard metadata.
-- `App.css` retains the existing cascade and semantic theme tokens, with feature
-  headings and expanded declarations. No styling or state dependency is needed
-  for these boundaries.
+
+### Component and stylesheet ownership
+
+- Home statistics: `HeroStatistics.tsx` coordinates preferences and metadata;
+  `StatisticsResults.tsx` contains request states and the statistics table.
+  `RankSelector.tsx` owns the anchored popover and uncommitted slider preview.
+- Shared analytics controls: `StatisticsFilters.tsx` renders date/match radios;
+  `PercentageBar.tsx` renders the accessible meter used by both dashboards.
+  Metric text formatting stays in `statistics.ts`.
+- Player dashboard: `PlayerProfile.tsx` contains identity/copy/rank and summary
+  presentation; `PlayerDashboard.tsx` retains resource coordination and tab state.
+  `MatchOverview.tsx` separates metadata loading, scoreboard hydration, and team
+  tables without adding requests or remounting the player panels.
+- Global CSS: `App.css` contains fonts, theme tokens, resets, shell/header styles,
+  shared button styles, and accessibility utilities.
+- Feature CSS lives beside components: `HeroCarousel.css`, `PlayerSearch.css`,
+  `HeroStatistics.css`, `PlayerDashboard.css`, and `MatchOverview.css`.
+  `DataDisplay.css` owns shared tables, percentage bars, tags, results, and
+  statistics control/layout primitives. Responsive rules stay with their owners.
+- `App.tsx` imports styles in explicit global/shared/feature order. Preserve that
+  order when modifying shared rules; these are plain global selectors, not CSS
+  Modules. No new dependencies or styling system are required.
+
+### Component folders
+
+Components and their styles are grouped by owner under `src/components`:
+
+```text
+components/
+  HeroCarousel/
+    HeroCarousel.tsx
+    HeroCarousel.css
+  HeroStatistics/
+    HeroStatistics.tsx
+    HeroStatistics.css
+    RankSelector.tsx
+    StatisticsResults.tsx
+  PlayerSearch/
+    PlayerSearch.tsx
+    PlayerSearch.css
+  PlayerDashboard/
+    PlayerDashboard.tsx
+    PlayerDashboard.css
+    PlayerDetails.tsx
+    PlayerPresentation.tsx
+    PlayerProfile.tsx
+  MatchOverview/
+    MatchOverview.tsx
+    MatchOverview.css
+  DataDisplay/
+    DataDisplay.css
+    PercentageBar.tsx
+    StatisticsFilters.tsx
+    MatchTags.tsx
+```
+
+`DataDisplay` contains visual components used by multiple features. Imports name
+files directly; there are no barrel exports. CSS import order remains explicit
+in `App.tsx` to preserve the existing cascade.

@@ -1,5 +1,5 @@
-import type { Resource } from '../hooks/useResource'
-import type { loadHeroDirectory } from '../services/players'
+import type { Resource } from '../../hooks/useResource'
+import type { loadHeroDirectory } from '../../services/players'
 
 export function Status<T>({ resource, label }: {
   resource: { state: Resource<T>, retry: () => void }
@@ -13,31 +13,6 @@ export function Status<T>({ resource, label }: {
       {label} unavailable.{' '}
       <button className="theme-toggle" onClick={resource.retry}>Retry {label}</button>
     </p>
-  )
-}
-
-export function Rate({ value, label }: { value: number | null, label: string }) {
-  if (value === null) return <>—</>
-  const percent = Math.max(0, Math.min(100, value * 100))
-
-  return (
-    <span
-      className="percentage-bar"
-      role="meter"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-      aria-valuetext={percent.toFixed(1) + '%'}
-    >
-      <span className="percentage-fill" style={{ width: percent + '%' }} />
-      <span className="percentage-label percentage-label-filled" aria-hidden="true">
-        {percent.toFixed(1)}%
-      </span>
-      <span className="percentage-label percentage-label-remainder" aria-hidden="true">
-        {(100 - percent).toFixed(1)}%
-      </span>
-    </span>
   )
 }
 

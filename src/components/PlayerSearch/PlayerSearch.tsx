@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { parsePlayerQuery, steamProfileUrl } from '../player'
-import { loadPlayerStats, playerDefaults, searchProfiles, type SteamProfile, type AnalyticsHeroStats, type PlayerWindow } from '../services/players'
-import { dateBounds } from '../services/statistics'
-import { HeroStatistics } from './HeroStatistics'
-import { PlayerDashboard } from './PlayerDashboard'
+import { parsePlayerQuery, steamProfileUrl } from '../../player'
+import { loadPlayerStats, playerDefaults, searchProfiles, type SteamProfile, type AnalyticsHeroStats, type PlayerWindow } from '../../services/players'
+import { dateBounds } from '../../services/statistics'
+import { HeroStatistics } from '../HeroStatistics/HeroStatistics'
+import { PlayerDashboard } from '../PlayerDashboard/PlayerDashboard'
 
 type Selection = { accountId: number, stats: AnalyticsHeroStats[], window: PlayerWindow, revision: number }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useResource } from '../hooks/useResource'
-import { loadMatchOverview, loadOverviewTags } from '../services/matches'
-import { loadHeroDirectory, loadProfiles } from '../services/players'
+import { useResource } from '../../hooks/useResource'
+import { loadMatchOverview, loadOverviewTags } from '../../services/matches'
+import { loadHeroDirectory, loadProfiles } from '../../services/players'
 const format = (value: number | null) => value === null ? '—' : value.toLocaleString()
 
 function Scoreboard({ match }: { match: Awaited<ReturnType<typeof loadMatchOverview>> }) {
@@ -22,7 +22,51 @@ function Scoreboard({ match }: { match: Awaited<ReturnType<typeof loadMatchOverv
     {(tags.state.status === 'error' || (tags.state.status === 'success' && tags.state.data.incomplete)) && <p role="status">Some performance tags are unavailable. <button className="theme-toggle" onClick={tags.retry}>Retry tags</button>
     </p>}
     {!match.players.length && <p>No player statistics recorded for this match.</p>}
-    {[0, 1].map((team) => <section key={team} aria-label={'Team ' + (team + 1)}>
+    {[0, 1].map((team) => (
+      <TeamScoreboard
+        key={team}
+        team={team}
+        match={match}
+        heroes={heroes.state.status === 'success' ? heroes.state.data : []}
+        profiles={profiles.state.status === 'success' ? profiles.state.data : []}
+        tags={tags.state.status === 'success' ? tags.state.data.tags : {}}
+        tagsLoading={tags.state.status === 'loading'}
+      />
+    ))}
+    <p className="statistics-note">Final damage and healing require an end-of-match snapshot. Missing values show —. Tags use the same recorded-history, global KDA, and lane rules as Recent matches. MVP rank is shown only when recorded; no Key player award is inferred.</p>
+  </>
+}
+
+export function MatchOverview({ matchId, close }: { matchId: number, close: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const data = useResource(useCallback((signal: AbortSignal) => loadMatchOverview(matchId, signal), [matchId]))
+  useEffect(() => { const element = dialog.current; element?.showModal(); return () => element?.close() }, [])
+
+  return <dialog className="match-overview" ref={dialog} onCancel={close} aria-labelledby="match-overview-title">
+    <div className="statistics-heading">
+      <h2 id="match-overview-title">Match {matchId}
+      </h2>
+      <button className="theme-toggle" onClick={close} autoFocus>Close match</button>
+    </div>
+    {data.state.status === 'loading' && <p role="status">Loading match overview…</p>}
+    {data.state.status === 'error' && <p role="status">Match metadata unavailable. <button className="theme-toggle" onClick={data.retry}>Retry match</button>
+    </p>}
+    {data.state.status === 'success' && <Scoreboard match={data.state.data} />}
+  </dialog>
+}
+
+type TeamScoreboardProps = {
+  team: number
+  match: Awaited<ReturnType<typeof loadMatchOverview>>
+  heroes: Awaited<ReturnType<typeof loadHeroDirectory>>
+  profiles: Awaited<ReturnType<typeof loadProfiles>>
+  tags: Awaited<ReturnType<typeof loadOverviewTags>>['tags']
+  tagsLoading: boolean
+}
+
+function TeamScoreboard({ team, match, heroes, profiles, tags, tagsLoading }: TeamScoreboardProps) {
+  return (
+    <section aria-label={'Team ' + (team + 1)}>
       <h3>Team {team + 1} {match.winner !== null && <span className={'match-result ' + (match.winner === team ? 'match-result-win' : 'match-result-loss')}>
         {match.winner === team ? 'Win' : 'Loss'}
       </span>}
@@ -41,9 +85,9 @@ function Scoreboard({ match }: { match: Awaited<ReturnType<typeof loadMatchOverv
           </thead>
           <tbody>
             {match.players.filter((player) => player.team === team).map((player) => {
-              const hero = heroes.state.status === 'success' ? heroes.state.data.find((entry) => entry.id === player.heroId) : undefined
-              const profile = profiles.state.status === 'success' ? profiles.state.data.find((entry) => entry.account_id === player.accountId) : undefined
-              const playerTags = tags.state.status === 'success' ? tags.state.data.tags[player.accountId] ?? [] : []
+              const hero = heroes.find((entry) => entry.id === player.heroId)
+              const profile = profiles.find((entry) => entry.account_id === player.accountId)
+              const playerTags = tags[player.accountId] ?? []
               return <tr key={player.accountId}>
                 <th scope="row">
                   <span className="statistics-hero">
@@ -77,7 +121,7 @@ function Scoreboard({ match }: { match: Awaited<ReturnType<typeof loadMatchOverv
                       aria-label={tag.label + ': ' + tag.evidence}>
                       {tag.label}
                     </span>)}
-                    {!playerTags.length && (tags.state.status === 'loading' ? '…' : '—')}
+                    {!playerTags.length && (tagsLoading ? '…' : '—')}
                   </div>
                 </td>
               </tr>
@@ -85,25 +129,6 @@ function Scoreboard({ match }: { match: Awaited<ReturnType<typeof loadMatchOverv
           </tbody>
         </table>
       </div>
-    </section>)}
-    <p className="statistics-note">Final damage and healing require an end-of-match snapshot. Missing values show —. Tags use the same recorded-history, global KDA, and lane rules as Recent matches. MVP rank is shown only when recorded; no Key player award is inferred.</p>
-  </>
-}
-
-export function MatchOverview({ matchId, close }: { matchId: number, close: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const data = useResource(useCallback((signal: AbortSignal) => loadMatchOverview(matchId, signal), [matchId]))
-  useEffect(() => { const element = dialog.current; element?.showModal(); return () => element?.close() }, [])
-
-  return <dialog className="match-overview" ref={dialog} onCancel={close} aria-labelledby="match-overview-title">
-    <div className="statistics-heading">
-      <h2 id="match-overview-title">Match {matchId}
-      </h2>
-      <button className="theme-toggle" onClick={close} autoFocus>Close match</button>
-    </div>
-    {data.state.status === 'loading' && <p role="status">Loading match overview…</p>}
-    {data.state.status === 'error' && <p role="status">Match metadata unavailable. <button className="theme-toggle" onClick={data.retry}>Retry match</button>
-    </p>}
-    {data.state.status === 'success' && <Scoreboard match={data.state.data} />}
-  </dialog>
+    </section>
+  )
 }

@@ -1,23 +1,30 @@
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { useResource } from '../hooks/useResource'
+import { PlayerProfile, PlayerSummary } from './PlayerProfile'
+import { StatisticsFilters } from '../DataDisplay/StatisticsFilters'
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useResource } from '../../hooks/useResource'
 import { HeroPerformance, Matches, Teammates } from './PlayerDetails'
-import { Rate, Status } from './PlayerPresentation'
-import { formatPlayerNumber, formatPlayerKda, filteredHistory, steamProfileUrl, summarizePlayer } from '../player'
-import { dateBounds, listRanks, loadSeasonStart } from '../services/statistics'
+import { Status } from './PlayerPresentation'
+import { filteredHistory, summarizePlayer } from '../../player'
+import { dateBounds, listRanks, loadSeasonStart } from '../../services/statistics'
 import {
   loadHeroDirectory, loadHistory, loadMates, loadPlayerHeroes, loadPlayerStats, loadProfiles, loadRank, playerDefaults,
   type AnalyticsHeroStats, type PlayerFilters, type PlayerWindow
-} from '../services/players'
+} from '../../services/players'
 
-export function PlayerDashboard({ accountId, initialStats, initialWindow, select, overview }: {
-  accountId: number, initialStats: AnalyticsHeroStats[], initialWindow: PlayerWindow, select: (id: number) => void, overview: () => void,
-}) {
+type PlayerDashboardProps = {
+  accountId: number
+  initialStats: AnalyticsHeroStats[]
+  initialWindow: PlayerWindow
+  select: (id: number) => void
+  overview: () => void
+}
+
+export function PlayerDashboard({ accountId, initialStats, initialWindow, select, overview }: PlayerDashboardProps) {
   const [filters, setFilters] = useState<PlayerFilters>(playerDefaults)
   const [resetVersion, setResetVersion] = useState(0)
   const [activeTab, setActiveTab] = useState<'matches' | 'heroes'>('matches')
   const matchTab = useRef<HTMLButtonElement>(null)
   const heroTab = useRef<HTMLButtonElement>(null)
-  const [copyMessage, setCopyMessage] = useState('')
   const window = useMemo(() => filters.date === playerDefaults.date ? initialWindow : dateBounds(filters.date), [filters.date, initialWindow])
   const profile = useResource(useCallback((signal: AbortSignal) => loadProfiles([accountId], signal), [accountId]))
   const rank = useResource(useCallback((signal: AbortSignal) => loadRank(accountId, signal), [accountId]))
@@ -36,11 +43,6 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
   const seasonStart = season.state.status === 'success' ? season.state.data : null
   const filterKey = JSON.stringify(filters) + ':' + resetVersion
   const summary = stats.state.status === 'success' ? summarizePlayer(stats.state.data) : null
-  const summaryItems: { label: string, value: ReactNode }[] = summary ? [
-    { label: 'Recorded games', value: summary.games.toLocaleString() }, { label: 'Wins / losses', value: `${summary.wins} / ${summary.losses}` },
-    { label: 'Win rate', value: <Rate value={summary.winRate} label="Player win rate" /> },
-    { label: 'Average K / D / A', value: formatPlayerKda(summary.kda) }, { label: 'Aggregate KDA', value: formatPlayerNumber(summary.aggregate) },
-  ] : []
 
   function resetDashboard() {
     setFilters(playerDefaults)
@@ -48,18 +50,11 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
     setResetVersion((previous) => previous + 1)
   }
 
-  function copyAccountId() {
-    navigator.clipboard.writeText(String(accountId)).then(
-      () => setCopyMessage('Copied'),
-      () => setCopyMessage('Couldn’t copy; select the account ID instead.'),
-    )
-  }
-
   function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
 
-    let nextTab = activeTab === 'matches' ? 'heroes' as const : 'matches' as const
+    let nextTab: 'matches' | 'heroes' = activeTab === 'matches' ? 'heroes' : 'matches'
     if (event.key === 'Home') nextTab = 'matches'
     if (event.key === 'End') nextTab = 'heroes'
     setActiveTab(nextTab)
@@ -74,84 +69,19 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
         className="theme-toggle"
         onClick={resetDashboard}>Reset</button>
     </div>
-    <header className="player-profile">
-      {person && <img
-        src={person.avatarfull}
-        alt=""
-        width="72"
-        height="72"
-        onError={(event) => { event.currentTarget.style.visibility = 'hidden' }} />}
-      <div>
-        <h1 id="player-title">
-          {person?.personaname || 'Account ' + accountId}
-        </h1>
-        <div className="player-identity">
-          <span>Account {accountId}
-          </span>
-          <button
-            className="theme-toggle"
-            onClick={copyAccountId}>Copy ID</button>
-          <a href={steamProfileUrl(accountId)} target="_blank" rel="noreferrer">Steam profile</a>
-          <span role="status">
-            {copyMessage}
-          </span>
-        </div>
-      </div>
-      <div className="player-rank">
-        {rankInfo && <img src={rankInfo.images.large ?? rankInfo.images.chalk ?? undefined} alt="" width="52" height="52" />}
-        <span>Latest recorded rank
-          <strong>
-            {rankData?.badge ? (rankInfo?.name ?? 'Tier ' + rankData.rank) + ' ' + rankData.subrank : 'Unranked / unavailable'}
-          </strong>
-        </span>
-      </div>
-    </header>
+    <PlayerProfile accountId={accountId} person={person} rankData={rankData} rankInfo={rankInfo} />
     <Status resource={profile} label="profile" />
     <Status resource={rank} label="rank" />
     <Status resource={ranks} label="rank names" />
     <div className="statistics-controls player-controls">
-      <fieldset className="radio-filter">
-        <legend>Date</legend>
-        {([7, 30] as const).map((days) => <label key={days}>
-          <input
-            type="radio"
-            name="player-date"
-            checked={filters.date.kind === 'rolling' && filters.date.days === days}
-            onChange={() => setFilters({ ...filters, date: { kind: 'rolling', days } })} />
-          {days} days</label>)}
-        <label>
-          <input
-            type="radio"
-            name="player-date"
-            checked={filters.date.kind === 'all'}
-            onChange={() => setFilters({ ...filters, date: { kind: 'all' } })} />
-          All</label>
-
-        {seasonStart !== null && <label>
-          <input
-            type="radio"
-            name="player-date"
-            checked={filters.date.kind === 'season'}
-            onChange={() => setFilters({ ...filters, date: { kind: 'season', start: seasonStart } })} />
-          Season to date</label>}
-      </fieldset>
-      <fieldset className="radio-filter">
-        <legend>Matches</legend>
-        <label>
-          <input
-            type="radio"
-            name="player-mode"
-            checked={filters.matchMode === 'ranked'}
-            onChange={() => setFilters({ ...filters, matchMode: 'ranked' })} />
-          Ranked only</label>
-        <label>
-          <input
-            type="radio"
-            name="player-mode"
-            checked={filters.matchMode === 'ranked,unranked'}
-            onChange={() => setFilters({ ...filters, matchMode: 'ranked,unranked' })} />
-          All</label>
-      </fieldset>
+      <StatisticsFilters
+        date={filters.date}
+        matchMode={filters.matchMode}
+        seasonStart={seasonStart}
+        dateGroupName="player-date"
+        matchGroupName="player-mode"
+        onChange={(patch) => setFilters({ ...filters, ...patch })}
+      />
     </div>
     {season.state.status === 'error' && <Status resource={season} label="season dates" />}
     <p className="statistics-note">
@@ -159,19 +89,7 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
       .</p>
     <section aria-label="Performance summary">
       <Status resource={stats} label="performance" />
-      {summary && <>
-        <dl className="player-summary">
-          {summaryItems.map((item) => <div key={item.label}>
-            <dt>
-              {item.label}
-            </dt>
-            <dd>
-              {item.value}
-            </dd>
-          </div>)}
-        </dl>
-        <p className="statistics-note">Aggregate KDA = (total kills + total assists) / total deaths. Wins and losses reflect API scoring; other outcomes may not count toward either.</p>
-      </>}
+      <PlayerSummary summary={summary} />
     </section>
     <Status resource={directory} label="hero names and portraits" />
     <div className="player-detail-layout">

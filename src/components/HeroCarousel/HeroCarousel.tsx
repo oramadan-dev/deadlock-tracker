@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listHeroes, type HeroSummary } from '../services/heroes'
+import { listHeroes, type HeroSummary } from '../../services/heroes'
 
 type HeroState =
   | { status: 'loading' }

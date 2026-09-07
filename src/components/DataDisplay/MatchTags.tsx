@@ -1,5 +1,5 @@
-import { historyTags, type MatchTag } from '../matchTags'
-import type { PlayerMatchHistoryEntry } from '../services/players'
+import { historyTags, type MatchTag } from '../../matchTags'
+import type { PlayerMatchHistoryEntry } from '../../services/players'
 
 export function MatchTags({ match, history, performance, loading }: {
   match: PlayerMatchHistoryEntry, history: PlayerMatchHistoryEntry[], performance: MatchTag[], loading: boolean,

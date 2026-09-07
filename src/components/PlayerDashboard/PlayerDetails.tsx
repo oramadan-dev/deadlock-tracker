@@ -1,10 +1,11 @@
+import { PercentageBar } from '../DataDisplay/PercentageBar'
 import { useCallback, useMemo, useState } from 'react'
-import { useResource } from '../hooks/useResource'
-import { MatchOverview } from './MatchOverview'
-import { MatchTags } from './MatchTags'
-import { formatPlayerNumber, formatPlayerKda, formatPlayerDate, buildHeroPerformanceRows, filteredHistory, matchOutcome, ratio, type HeroSort } from '../player'
-import { loadMates, loadMatchPerformance, loadPlayerHeroes, loadProfiles, type AnalyticsHeroStats } from '../services/players'
-import { Status, Rate, Pager, HeroName, type HeroDirectory } from './PlayerPresentation'
+import { useResource } from '../../hooks/useResource'
+import { MatchOverview } from '../MatchOverview/MatchOverview'
+import { MatchTags } from '../DataDisplay/MatchTags'
+import { formatPlayerNumber, formatPlayerKda, formatPlayerDate, buildHeroPerformanceRows, filteredHistory, matchOutcome, ratio, type HeroSort } from '../../player'
+import { loadMates, loadMatchPerformance, loadPlayerHeroes, loadProfiles, type AnalyticsHeroStats } from '../../services/players'
+import { Status, Pager, HeroName, type HeroDirectory } from './PlayerPresentation'
 
 export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHeroStats[], details: Awaited<ReturnType<typeof loadPlayerHeroes>> | null, heroes: HeroDirectory }) {
   const [sorting, setSorting] = useState<{ key: HeroSort, direction: 'asc' | 'desc' }>({ key: 'games', direction: 'desc' })
@@ -47,7 +48,7 @@ export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHe
               {row.games.toLocaleString()}
             </td>
             <td className="player-rate-cell">
-              <Rate value={row.winRate} label={row.hero + ' win rate'} />
+              <PercentageBar value={row.winRate} label={row.hero + ' win rate'} />
             </td>
             <td>
               {formatPlayerKda([ratio(row.stat.total_kills, row.games), ratio(row.stat.total_deaths, row.games), ratio(row.stat.total_assists, row.games)])} <span title="KDA: (kills + assists) / deaths">({formatPlayerNumber(row.kda)})</span>
@@ -158,7 +159,7 @@ export function Teammates({ mates, select }: { mates: Awaited<ReturnType<typeof 
           </button>
           <p>
             {mate.matches_played.toLocaleString()} shared games · {mate.wins.toLocaleString()} wins</p>
-          <Rate value={ratio(mate.wins, mate.matches_played)} label={name + ' shared win rate'} />
+          <PercentageBar value={ratio(mate.wins, mate.matches_played)} label={name + ' shared win rate'} />
         </li>
       })}
     </ul>

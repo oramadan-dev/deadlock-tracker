@@ -1,0 +1,123 @@
+.player-search {
+  display: grid;
+  width: min(100%, 720px);
+  grid-template-columns: 1fr auto;
+  padding: 10px;
+  border: 2px solid var(--color-border);
+  background: var(--color-page);
+  box-shadow: 8px 8px 0 var(--color-surface);
+}
+
+.player-search input {
+  min-width: 0;
+  height: 58px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text);
+  background: var(--color-input);
+}
+
+.player-search input::placeholder {
+  color: var(--color-placeholder);
+}
+
+.player-search input:focus {
+  outline: none;
+}
+
+.player-search input:focus-visible {
+  background: color-mix(in srgb, var(--color-input) 92%, var(--color-text));
+}
+
+.player-search button {
+  min-width: 138px;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-mist);
+  background: var(--color-accent);
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.player-search button:hover {
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+@media (max-width: 640px) {
+  .player-search {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .player-search button {
+    height: 52px;
+  }
+}
+
+.player-candidates {
+  width: 100%;
+  min-width: 0;
+}
+
+.player-candidates h2 {
+  font-family: var(--font-display);
+}
+
+.player-candidates a {
+  color: var(--color-text);
+  text-underline-offset: 3px;
+}
+
+.player-candidates ul {
+  padding: 0;
+  list-style: none;
+  margin: 0;
+}
+
+.player-candidates li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 0;
+}
+
+.candidate-select {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 0;
+  color: var(--color-text);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.candidate-select:hover {
+  background: var(--color-grid);
+}
+
+.candidate-select strong {
+  overflow-wrap: anywhere;
+}
+
+.candidate-select small {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-placeholder);
+}
+
+@media (max-width: 800px) {
+  .player-candidates li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

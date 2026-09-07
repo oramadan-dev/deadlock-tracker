@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
-import { HeroCarousel } from './components/HeroCarousel'
-import { PlayerSearch } from './components/PlayerSearch'
+import { HeroCarousel } from './components/HeroCarousel/HeroCarousel'
+import { PlayerSearch } from './components/PlayerSearch/PlayerSearch'
+// Load shared primitives before feature overrides; keep this order explicit.
 import './App.css'
+import './components/DataDisplay/DataDisplay.css'
+import './components/HeroCarousel/HeroCarousel.css'
+import './components/PlayerSearch/PlayerSearch.css'
+import './components/HeroStatistics/HeroStatistics.css'
+import './components/PlayerDashboard/PlayerDashboard.css'
+import './components/MatchOverview/MatchOverview.css'
 
 type Theme = 'dark' | 'light'
 

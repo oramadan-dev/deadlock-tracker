@@ -74,3 +74,15 @@ export function topRows(data: StatisticsData, preferences: Preferences) {
         || (b.values.matches ?? 0) - (a.values.matches ?? 0) || a.hero.id - b.hero.id
     })
 }
+
+export function formatStatisticMetric(row: ReturnType<typeof calculateRows>[number], metric: typeof metrics[number]): string {
+  if (metric.format === 'kda') {
+    return row.averageKda.map((part) => part === null ? '—' : part.toFixed(1)).join(' / ')
+  }
+  const value = row.values[metric.id]
+  if (value === null) return '—'
+  if (metric.format === 'percent') return (value * 100).toFixed(1) + '%'
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: metric.format === 'integer' ? 0 : 2,
+  })
+}

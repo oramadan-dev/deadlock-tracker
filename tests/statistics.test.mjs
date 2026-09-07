@@ -118,3 +118,15 @@ test('all matches and season dates are identical across analytics requests', asy
     assert.equal(query.maxUnixTimestamp, requests[0].maxUnixTimestamp)
   }
 })
+
+test('metric formatting preserves percentage precision, K/D/A, and unavailable values', async () => {
+  const { formatStatisticMetric, metrics } = await import('../src/statistics.ts')
+  const [row] = calculateRows(fixture([stat(1)]))
+  const format = (id, source = row) => formatStatisticMetric(source, metrics.find((metric) => metric.id === id))
+  assert.equal(format('winRate'), '60.0%')
+  assert.equal(format('kda'), '6.0 / 2.0 / 8.0')
+  assert.equal(format('matches'), '100')
+  assert.equal(format('ratio'), '7')
+  assert.equal(format('banRate', { ...row, values: { ...row.values, banRate: null } }), '—')
+  assert.equal(format('kda', { ...row, averageKda: [null, null, null] }), '— / — / —')
+})
