@@ -68,7 +68,7 @@ test('service shares filters, tolerates supplemental failures and rejects aborte
     assert.equal(request.minAverageBadge, 91)
     assert.equal(request.maxAverageBadge, 116)
     assert.equal(request.matchMode, 'ranked')
-    assert.equal(request.maxUnixTimestamp - request.minUnixTimestamp, 604800)
+    assert.equal(request.minUnixTimestamp, 0)
     assert.equal(request.minUnixTimestamp, requests[0].minUnixTimestamp)
   }
   hold = true

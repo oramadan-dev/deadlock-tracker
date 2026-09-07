@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useResource, type Resource } from '../hooks/useResource'
+import { MatchOverview } from './MatchOverview'
+import { MatchTags } from './MatchTags'
 import { compareMetric, filteredHistory, matchOutcome, ratio, steamProfileUrl, summarizePlayer } from '../player'
 import { dateBounds, listRanks, loadSeasonStart } from '../services/statistics'
-import { loadHeroDirectory, loadHistory, loadMates, loadPlayerHeroes, loadPlayerStats, loadProfiles, loadRank, playerDefaults,
+import { loadHeroDirectory, loadHistory, loadMates, loadMatchPerformance, loadPlayerHeroes, loadPlayerStats, loadProfiles, loadRank, playerDefaults,
   type AnalyticsHeroStats, type PlayerFilters, type PlayerWindow } from '../services/players'
 
 const decimal = (value: number | null) => value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 })
@@ -58,19 +60,24 @@ function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHeroStats
       <td>{row.time === null ? '—' : decimal(row.time / 3600) + ' h'}</td><td>{timestamp(row.last)}</td>
     </tr>)}</tbody></table></div><Pager page={page} size={10} count={rows.length} change={setPage} label="Hero pages" /></>
 }
-function Matches({ history, heroes }: { history: ReturnType<typeof filteredHistory>, heroes: HeroDirectory }) {
+function Matches({ history, allHistory, heroes }: { history: ReturnType<typeof filteredHistory>, allHistory: ReturnType<typeof filteredHistory>, heroes: HeroDirectory }) {
   const [page, setPage] = useState(0)
+  const [openMatch, setOpenMatch] = useState<number | null>(null)
+  const visible = useMemo(() => history.slice(page * 20, page * 20 + 20), [history, page])
+  const performance = useResource(useCallback((signal: AbortSignal) => loadMatchPerformance(visible, signal), [visible]))
   if (!history.length) return <p>No recorded matches for these filters.</p>
   return <><div className="statistics-table-scroll" tabIndex={0} aria-label="Recent matches, scroll for more columns"><table className="player-table">
     <caption className="visually-hidden">Recent recorded matches, newest first</caption>
-    <thead><tr>{['Hero', 'Date', 'Result', 'K / D / A', 'Duration', 'Type'].map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
-    <tbody>{history.slice(page * 20, page * 20 + 20).map((match) => <tr key={match.match_id}>
-      <th scope="row"><HeroName id={match.hero_id} heroes={heroes} /></th><td>{timestamp(match.start_time)}</td>
+    <thead><tr>{['Hero', 'Result', 'K / D / A', 'Duration', 'Performance'].map((label) => <th scope="col" key={label}>{label}</th>)}</tr></thead>
+    <tbody>{visible.map((match) => <tr key={match.match_id} className="match-history-row" onClick={(event) => { if (!(event.target instanceof Element) || !event.target.closest("button, .match-tag")) setOpenMatch(match.match_id) }}>
+      <th scope="row"><button className="teammate-link" aria-label={"Open match " + match.match_id} onClick={() => setOpenMatch(match.match_id)}><HeroName id={match.hero_id} heroes={heroes} /></button></th>
       <td><span className={"match-result " + (match.player_match_outcome === 1 ? "match-result-win" : match.player_match_outcome === 2 ? "match-result-loss" : "match-result-neutral")}>{matchOutcome(match.player_match_outcome)}</span>{match.team_abandoned ? ' · Team abandoned' : ''}</td>
       <td>{match.player_kills} / {match.player_deaths} / {match.player_assists} <span title="KDA: (kills + assists) / deaths">({decimal(ratio(match.player_kills + match.player_assists, match.player_deaths))})</span></td>
       <td>{Math.floor(match.match_duration_s / 60)}:{String(match.match_duration_s % 60).padStart(2, '0')}</td>
-      <td>{match.match_mode === 4 ? 'Ranked' : 'Unranked'}</td>
-    </tr>)}</tbody></table></div><Pager page={page} size={20} count={history.length} change={setPage} label="Match pages" /></>
+      <td className="match-performance-cell"><MatchTags match={match} history={allHistory}
+        performance={performance.state.status === 'success' ? performance.state.data[match.match_id] ?? [] : []}
+        loading={performance.state.status === 'loading'} /></td>
+    </tr>)}</tbody></table></div><Pager page={page} size={20} count={history.length} change={setPage} label="Match pages" />{openMatch !== null && <MatchOverview key={openMatch} matchId={openMatch} close={() => setOpenMatch(null)} />}</>
 }
 function Teammates({ mates, select }: { mates: Awaited<ReturnType<typeof loadMates>>, select: (id: number) => void }) {
   const loader = useCallback((signal: AbortSignal) => loadProfiles(mates.map((mate) => mate.mate_id), signal), [mates])
@@ -103,6 +110,7 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
   const stats = useResource(useCallback((signal: AbortSignal) => loadPlayerStats(accountId, filters, window, signal), [accountId, filters, window]), initialStats)
   const details = useResource(useCallback((signal: AbortSignal) => loadPlayerHeroes(accountId, filters, window, signal), [accountId, filters, window]))
   const history = useResource(useCallback((signal: AbortSignal) => loadHistory(accountId, signal), [accountId]))
+  const filteredMatches = useMemo(() => history.state.status === 'success' ? filteredHistory(history.state.data, filters, window) : [], [history.state, filters, window])
   const mates = useResource(useCallback((signal: AbortSignal) => loadMates(accountId, window, signal), [accountId, window]))
   const person = profile.state.status === 'success' ? profile.state.data.find((entry) => entry.account_id === accountId) : undefined
   const heroes = directory.state.status === 'success' ? directory.state.data : []
@@ -152,7 +160,7 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
           <button ref={heroTab} id="heroes-tab" role="tab" aria-selected={activeTab === 'heroes'} aria-controls="heroes-panel" tabIndex={activeTab === 'heroes' ? 0 : -1} onClick={() => setActiveTab('heroes')}>Hero performance</button>
         </div>
         <section id="matches-panel" role="tabpanel" aria-labelledby="matches-tab" hidden={activeTab !== 'matches'} tabIndex={0}>
-          <Status resource={history} label="match history" />{history.state.status === 'success' && <Matches key={filterKey} history={filteredHistory(history.state.data, filters, window)} heroes={heroes} />}
+          <Status resource={history} label="match history" />{history.state.status === 'success' && <Matches key={filterKey} allHistory={history.state.data} history={filteredMatches} heroes={heroes} />}
         </section>
         <section id="heroes-panel" role="tabpanel" aria-labelledby="heroes-tab" hidden={activeTab !== 'heroes'} tabIndex={0}>
           <Status resource={stats} label="hero performance" /><Status resource={details} label="playtime and last played" />

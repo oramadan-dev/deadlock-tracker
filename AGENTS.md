@@ -81,6 +81,13 @@ run, state why in the handoff.
   summary calculations, and match-history filtering live in `src/player.ts`.
   Use `useResource` for independently cancellable dashboard sections. Teammate
   totals support date filters but not the dashboard's ranked/all selection.
+- Match tags and runtime lane-metadata validation live in `src/matchTags.ts`.
+- Match overview metadata is validated in `src/matchOverview.ts` and loaded via
+  `src/services/matches.ts`. Only end-of-match snapshots supply final damage and
+  healing. Display recorded MVP rank without inferring a Key player award.
+  KDA baselines use global hero/mode totals before the match date. Lane
+  metadata is loaded automatically for visible matches through the player service with Steam fallback
+  disabled; never infer lane results from final match totals.
 - Home-page analytics use `src/services/statistics.ts`; metric calculations live in `src/statistics.ts`. Keep rank/date/match filters
   aligned across endpoints and distinguish recorded ban percentage from full
   ban coverage.

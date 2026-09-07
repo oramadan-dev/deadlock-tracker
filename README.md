@@ -26,8 +26,8 @@ statistics calculation and request tests. No additional test framework is used.
 ## Home-page statistics
 
 `src/services/statistics.ts` uses the installed client's hero, ban, game, and
-rank and ranked-season endpoints. The default view ranks five active heroes by win rate over seven
-days of ranked normal games, with average team badges from Phantom I (91)
+rank and ranked-season endpoints. The default view ranks five active heroes by win rate over all recorded
+ranked normal games, with average team badges from Phantom I (91)
 through Eternus VI (116) and at least 100 hero appearances. Date bounds end at
 the latest full hour to reuse cached API results. Rank, time, and match filters
 are shared across requests. A compact rank summary opens the two-handle slider,
@@ -71,7 +71,7 @@ src/hooks/useResource.ts manages independent loading/error/success states,
 retries, and cancellation; superseded results cannot replace current state.
 Selection and filters remain in memory and refresh returns to the overview.
 
-The dashboard defaults independently to 30 days, ranked + unranked normal games,
+The dashboard defaults independently to All time, ranked + unranked normal games,
 with 7-day and API-backed current-season alternatives. No home-page rank or
 minimum-appearance filters apply. AnalyticsApi.heroStats, filtered by account,
 provides raw totals for summary and hero performance. PlayersApi.playerHeroStats
@@ -86,6 +86,32 @@ Outcome values retain invalid, penalized, penalized-party, and not-scored result
 team abandonment is shown separately. History is paginated at 20 rows, heroes at
 10 rows. Data represents recorded API coverage, not guaranteed career history.
 Latest recorded rank is independent of the date filter.
+
+Recent matches show hero, result, K/D/A, duration and compact performance tags.
+Hover a tag for a short explanation; focusable labels expose the same evidence
+for assistive technology. No expansion or lane-check click is needed.
+KDA tags compare with global aggregate hero KDA for the same match mode, across
+all ranks, over the 30 complete UTC days before the match date. At least 100
+recorded games and a 25% difference are required. Zero-death, missing and invalid
+baselines produce no KDA tag. Personal-average tags are not used. Farm, souls and
+deny comparisons are omitted because the aggregate response lacks a matching
+per-minute baseline. Recorded win/loss streaks end at the displayed match;
+missing history may hide interruptions. Abandoned, unscored and sub-10-minute
+matches receive no tags and interrupt streaks.
+
+Visible-page performance loads automatically with three concurrent workers,
+sharing global requests by date and mode. Failed sources produce no corresponding
+tag; page/filter changes cancel pending work. Lane metadata uses MatchesApi.metadata with
+disableSteam=true and independent cancellation. The client's void response is
+validated as unknown against the relevant subset of
+[Valve's metadata protocol](https://github.com/SteamTracking/Protobufs/blob/master/deadlock/citadel_gcmessages_common.proto).
+Equal-size assigned lanes (one or two players per side) require exact 9-minute
+snapshots for every participant. A lead of at least 500 souls and 10% of the
+lower side's total gives Won lane / Lost lane; otherwise Even lane. Missing
+snapshots or ambiguous sides produce no lane tag. This estimates lane outcomes;
+assigned lanes cannot establish actual swaps, rotations or individual credit.
+Calculations and validation live in src/matchTags.ts; presentation lives in
+src/components/MatchTags.tsx. No metadata or personal data is persisted.
 
 Frequent teammates use PlayersApi.mateStats with the selected dates, normal game
 mode and sameParty=false. They include all match types because the endpoint has
@@ -104,3 +130,14 @@ keys and Home/End select and focus tabs. Filter changes still reset pagination.
 Match IDs remain internal; results show green Win / red Loss badges and neutral
 labels for other outcomes. Frequent teammates occupy a 280px left sidebar with
 compact entries and a short date/match-type note, stacking below the panel under 1000px.
+
+
+Click a Recent matches row or its hero button to open a keyboard-accessible match
+overview. It preserves history pagination on close and groups final player stats
+by recorded team, including the winner. Metadata is runtime-validated because the
+installed client declares this response as void. Damage/healing require a snapshot
+exactly at match duration; missing values remain unavailable. Profile and tag
+failures do not hide the scoreboard. Player histories are fetched with three
+workers, with global baselines shared across participants; existing tag eligibility
+rules apply. Optional mvp_rank is displayed verbatim as MVP rank N in history and
+the overview. No MVP winner or Key player mapping is inferred from this number.

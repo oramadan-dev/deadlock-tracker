@@ -31,7 +31,7 @@ export type Preferences = StatisticsFilters & {
 }
 
 export const defaults: Preferences = {
-  date: { kind: 'rolling', days: 7 }, minRank: 9, maxRank: 11, matchMode: 'ranked', minimum: 100,
+  date: { kind: 'all' }, minRank: 9, maxRank: 11, matchMode: 'ranked', minimum: 100,
   sort: 'winRate', direction: 'desc', columns: ['winRate', 'pickRate', 'banRate', 'kda', 'matches'],
 }
 
