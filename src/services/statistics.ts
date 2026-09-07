@@ -6,7 +6,7 @@ import type { AnalyticsHeroStats } from 'deadlock_api_client/models/analytics-he
 import type { HeroBanStats } from 'deadlock_api_client/models/hero-ban-stats'
 import { listHeroes, type HeroSummary } from './heroes.ts'
 
-export type DateSelection = { kind: 'rolling', days: 7 | 30 } | { kind: 'season', start: number }
+export type DateSelection = { kind: 'all' } | { kind: 'rolling', days: 7 | 30 } | { kind: 'season', start: number }
 
 export type StatisticsFilters = {
   date: DateSelection
@@ -41,7 +41,7 @@ export async function loadSeasonStart(signal: AbortSignal) {
 
 export function dateBounds(date: DateSelection, now = Date.now()) {
   const end = Math.floor(now / 3600000) * 3600
-  return { minUnixTimestamp: date.kind === 'rolling' ? end - date.days * 86400 : date.start,
+  return { minUnixTimestamp: date.kind === 'all' ? 0 : date.kind === 'rolling' ? end - date.days * 86400 : date.start,
     maxUnixTimestamp: date.kind === 'season' ? Math.max(end, date.start) : end }
 }
 

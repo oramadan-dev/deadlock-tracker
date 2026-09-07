@@ -35,10 +35,10 @@ test('zero denominators and unavailable supplemental data stay undefined', () =>
   assert.deepEqual(row.averageKda, [null, null, null])
 })
 
-test('active identity join, minimum sample, tie order, and top five', () => {
+test('active identity join, minimum sample, and tie order across all heroes', () => {
   const data = fixture([stat(9, { matches: 99 }), stat(3), stat(2), stat(1), stat(4), stat(5), stat(6), stat(7, { matches: 200, wins: 120 })])
   data.heroes = data.heroes.filter((hero) => hero.id !== 1)
-  assert.deepEqual(topRows(data, defaults).map((r) => r.hero.id), [7, 2, 3, 4, 5])
+  assert.deepEqual(topRows(data, defaults).map((r) => r.hero.id), [7, 2, 3, 4, 5, 6])
   assert.deepEqual(topRows(data, { ...defaults, minimum: 1000 }), [])
   assert.deepEqual(topRows(fixture([]), defaults), [])
 })
@@ -82,6 +82,10 @@ test('service shares filters, tolerates supplemental failures and rejects aborte
 
 test('date windows and active season boundaries', () => {
   const now = 2000000000000
+  assert.deepEqual(dateBounds({ kind: 'all' }, now), {
+    minUnixTimestamp: 0,
+    maxUnixTimestamp: Math.floor(now / 3600000) * 3600,
+  })
   for (const days of [7, 30]) {
     const bounds = dateBounds({ kind: 'rolling', days }, now)
     assert.equal(bounds.maxUnixTimestamp - bounds.minUnixTimestamp, days * 86400)

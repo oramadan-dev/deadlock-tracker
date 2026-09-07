@@ -77,6 +77,10 @@ run, state why in the handoff.
   behavior into hooks or plain modules only when reuse or complexity warrants it.
 - Keep API access behind a small service boundary so components do not depend on
   transport details.
+- Player lookup and endpoints live in `src/services/players.ts`; identity parsing,
+  summary calculations, and match-history filtering live in `src/player.ts`.
+  Use `useResource` for independently cancellable dashboard sections. Teammate
+  totals support date filters but not the dashboard's ranked/all selection.
 - Home-page analytics use `src/services/statistics.ts`; metric calculations live in `src/statistics.ts`. Keep rank/date/match filters
   aligned across endpoints and distinguish recorded ban percentage from full
   ban coverage.

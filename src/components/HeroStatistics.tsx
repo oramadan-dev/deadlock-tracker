@@ -114,10 +114,6 @@ export function HeroStatistics() {
   }, [attempt])
   function update(patch: Partial<Preferences>) { setPreferences((previous) => ({ ...previous, ...patch })) }
   function commitRanks() { update(draftRanks) }
-  function reset() {
-    setPreferences(defaults)
-    setDraftRanks({ minRank: defaults.minRank, maxRank: defaults.maxRank })
-  }
   const rankInputEvents = {
     onPointerDown: (event: React.PointerEvent<HTMLInputElement>) => event.currentTarget.setPointerCapture(event.pointerId),
     onPointerUp: commitRanks,
@@ -137,7 +133,7 @@ export function HeroStatistics() {
     update({ sort: metric, direction: preferences.sort === metric && preferences.direction === 'desc' ? 'asc' : 'desc' })
   }
   return (
-    <section className="hero-statistics" aria-labelledby="statistics-title">
+    <section className="hero-statistics" aria-label="Top heroes">
       <div className="statistics-controls">
         <button ref={rankButton} type="button" className="theme-toggle" popoverTarget="rank-popup" aria-label={"Edit average match rank: " + rankSummary}>{rankSummary} <span aria-hidden="true">▾</span></button>
         <div ref={rankPopup} id="rank-popup" className="rank-popup" popover="auto" aria-label="Average match rank">
@@ -162,6 +158,7 @@ export function HeroStatistics() {
         </div>
         <fieldset className="radio-filter"><legend>Date</legend>
           {([7, 30] as const).map((days) => <label key={days}><input type="radio" name="statistics-date" checked={preferences.date.kind === 'rolling' && preferences.date.days === days} onChange={() => update({ date: { kind: 'rolling', days } })} />{days} days</label>)}
+          <label><input type="radio" name="statistics-date" checked={preferences.date.kind === 'all'} onChange={() => update({ date: { kind: 'all' } })} />All</label>
           {seasonStart !== null && <label><input type="radio" name="statistics-date" checked={preferences.date.kind === 'season'} onChange={() => update({ date: { kind: 'season', start: seasonStart } })} />Season to date</label>}
         </fieldset>
         <fieldset className="radio-filter"><legend>Matches</legend>
@@ -171,7 +168,7 @@ export function HeroStatistics() {
       </div>
       {seasonError && <p role="status">Season dates unavailable. <button type="button" className="theme-toggle" onClick={() => setSeasonAttempt((value) => value + 1)}>Retry season dates</button></p>}
       {rankError && <p role="status">Rank names unavailable. <button type="button" className="theme-toggle" onClick={retry}>Retry</button></p>}
-      <p className="statistics-note">{preferences.date.kind === 'rolling' ? 'Last ' + preferences.date.days + ' days' : 'Season to date'} · {preferences.matchMode === 'ranked' ? 'Ranked' : 'Ranked + unranked'} · At least 100 appearances · {preferences.direction === 'desc' ? 'Highest first' : 'Lowest first'}</p>
+      <p className="statistics-note">{preferences.date.kind === 'rolling' ? 'Last ' + preferences.date.days + ' days' : preferences.date.kind === 'all' ? 'All time' : 'Season to date'} · {preferences.matchMode === 'ranked' ? 'Ranked' : 'Ranked + unranked'} · At least 100 appearances · {preferences.direction === 'desc' ? 'Highest first' : 'Lowest first'}</p>
       <StatisticsResults key={requestKey} preferences={preferences} retry={retry} sort={sort} />
     </section>
   )

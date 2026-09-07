@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HeroCarousel } from './components/HeroCarousel'
-import { HeroStatistics } from './components/HeroStatistics'
+import { PlayerSearch } from './components/PlayerSearch'
 import './App.css'
 
 type Theme = 'dark' | 'light'
@@ -40,18 +40,7 @@ function App() {
 
       <main className="main-content">
         <HeroCarousel />
-        <form className="player-search" action="#" onSubmit={(event) => event.preventDefault()}>
-          <label className="visually-hidden" htmlFor="player-name">Find a player</label>
-          <input
-            id="player-name"
-            name="player"
-            type="search"
-            placeholder="Steam name or account ID"
-            autoComplete="off"
-          />
-          <button type="submit">Search</button>
-        </form>
-        <HeroStatistics />
+        <PlayerSearch />
       </main>
     </div>
   )
