@@ -9,6 +9,11 @@ type RankSelectorProps = RankRange & {
 
 export function RankSelector({ minRank, maxRank, ranks, onChange }: RankSelectorProps) {
   const [draftRanks, setDraftRanks] = useState({ minRank, maxRank })
+  const [committedRanks, setCommittedRanks] = useState({ minRank, maxRank })
+  if (committedRanks.minRank !== minRank || committedRanks.maxRank !== maxRank) {
+    setCommittedRanks({ minRank, maxRank })
+    setDraftRanks({ minRank, maxRank })
+  }
   const rankButton = useRef<HTMLButtonElement>(null)
   const rankPopup = useRef<HTMLDivElement>(null)
   useEffect(() => {

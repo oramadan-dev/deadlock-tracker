@@ -1,16 +1,25 @@
 import { PercentageBar } from '../DataDisplay/PercentageBar'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useResource } from '../../hooks/useResource'
-import { MatchOverview } from '../MatchOverview/MatchOverview'
+import { visiblePage, type PlayerView } from '../../navigation'
 import { MatchTags } from '../DataDisplay/MatchTags'
 import { formatPlayerNumber, formatPlayerKda, formatPlayerDate, buildHeroPerformanceRows, filteredHistory, matchOutcome, ratio, type HeroSort } from '../../player'
 import { loadMates, loadMatchPerformance, loadPlayerHeroes, loadProfiles, type AnalyticsHeroStats } from '../../services/players'
 import { Status, Pager, HeroName, type HeroDirectory } from './PlayerPresentation'
 
-export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHeroStats[], details: Awaited<ReturnType<typeof loadPlayerHeroes>> | null, heroes: HeroDirectory }) {
-  const [sorting, setSorting] = useState<{ key: HeroSort, direction: 'asc' | 'desc' }>({ key: 'games', direction: 'desc' })
-  const [page, setPage] = useState(0)
+type HeroPerformanceProps = {
+  stats: AnalyticsHeroStats[]
+  details: Awaited<ReturnType<typeof loadPlayerHeroes>> | null
+  heroes: HeroDirectory
+  pageIndex: number
+  sorting: PlayerView['sorting']
+  changePage: (page: number) => void
+  changeSort: (sorting: PlayerView['sorting']) => void
+}
+
+export function HeroPerformance({ stats, details, heroes, pageIndex, sorting, changePage, changeSort }: HeroPerformanceProps) {
   const rows = buildHeroPerformanceRows(stats, details, heroes, sorting)
+  const page = visiblePage(pageIndex, rows.length, 10)
   const columns: { key: HeroSort, label: string }[] = [{ key: 'hero', label: 'Hero' }, { key: 'games', label: 'Games' }, { key: 'winRate', label: 'Win %' }, { key: 'kda', label: 'Average K / D / A' }, { key: 'time', label: 'Playtime' }, { key: 'last', label: 'Last played' }]
   if (!rows.length) return <p>No recorded matches for these filters.</p>
 
@@ -31,8 +40,7 @@ export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHe
                 className="metric-sort"
                 title={column.key === 'kda' ? 'Sort by aggregate (kills + assists) / deaths' : undefined}
                 onClick={() => {
-                  setSorting({ key: column.key, direction: sorting.key === column.key && sorting.direction === 'desc' ? 'asc' : 'desc' })
-                  setPage(0)
+                  changeSort({ key: column.key, direction: sorting.key === column.key && sorting.direction === 'desc' ? 'asc' : 'desc' })
                 }}>
                 <span className="metric-sort-label">{column.label}</span>
                 {sorting.key === column.key && <span className="metric-sort-indicator" aria-hidden="true">
@@ -66,13 +74,21 @@ export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHe
         </tbody>
       </table>
     </div>
-    <Pager page={page} size={10} count={rows.length} change={setPage} label="Hero pages" />
+    <Pager page={page} size={10} count={rows.length} change={changePage} label="Hero pages" />
   </>
 }
 
-export function Matches({ history, allHistory, heroes }: { history: ReturnType<typeof filteredHistory>, allHistory: ReturnType<typeof filteredHistory>, heroes: HeroDirectory }) {
-  const [page, setPage] = useState(0)
-  const [openMatch, setOpenMatch] = useState<number | null>(null)
+type MatchesProps = {
+  history: ReturnType<typeof filteredHistory>
+  allHistory: ReturnType<typeof filteredHistory>
+  heroes: HeroDirectory
+  pageIndex: number
+  changePage: (page: number) => void
+  openMatch: (matchId: number) => void
+}
+
+export function Matches({ history, allHistory, heroes, pageIndex, changePage, openMatch }: MatchesProps) {
+  const page = visiblePage(pageIndex, history.length, 20)
   const visible = useMemo(() => history.slice(page * 20, page * 20 + 20), [history, page])
   const performance = useResource(useCallback((signal: AbortSignal) => loadMatchPerformance(visible, signal), [visible]))
   if (!history.length) return <p>No recorded matches for these filters.</p>
@@ -96,13 +112,13 @@ export function Matches({ history, allHistory, heroes }: { history: ReturnType<t
             key={match.match_id}
             className="match-history-row"
             onClick={(event) => {
-              if (!(event.target instanceof Element) || !event.target.closest('button, .match-tag')) setOpenMatch(match.match_id)
+              if (!(event.target instanceof Element) || !event.target.closest('button, .match-tag')) openMatch(match.match_id)
             }}>
             <th scope="row">
               <button
                 className="teammate-link"
                 aria-label={'Open match ' + match.match_id}
-                onClick={() => setOpenMatch(match.match_id)}>
+                onClick={() => openMatch(match.match_id)}>
                 <HeroName id={match.hero_id} heroes={heroes} />
               </button>
             </th>
@@ -132,8 +148,7 @@ export function Matches({ history, allHistory, heroes }: { history: ReturnType<t
         </tbody>
       </table>
     </div>
-    <Pager page={page} size={20} count={history.length} change={setPage} label="Match pages" />
-    {openMatch !== null && <MatchOverview key={openMatch} matchId={openMatch} close={() => setOpenMatch(null)} />}
+    <Pager page={page} size={20} count={history.length} change={changePage} label="Match pages" />
   </>
 }
 

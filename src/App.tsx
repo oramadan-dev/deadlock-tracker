@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigation, navigate } from './hooks/useNavigation'
+import { parseNavigation } from './navigation'
+import { MatchOverview } from './components/MatchOverview/MatchOverview'
 import { HeroCarousel } from './components/HeroCarousel/HeroCarousel'
 import { PlayerSearch } from './components/PlayerSearch/PlayerSearch'
 // Load shared primitives before feature overrides; keep this order explicit.
@@ -17,6 +20,7 @@ function getInitialTheme(): Theme {
 }
 
 function App() {
+  const view = useNavigation()
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
@@ -29,7 +33,11 @@ function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="Deadlock Tracker home">
+        <a className="wordmark" href="/" onClick={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+          event.preventDefault()
+          navigate(parseNavigation(''))
+        }} aria-label="Deadlock Tracker home">
           <span className="wordmark-mark" aria-hidden="true">DT</span>
           <span>Deadlock Tracker</span>
         </a>
@@ -47,7 +55,8 @@ function App() {
 
       <main className="main-content">
         <HeroCarousel />
-        <PlayerSearch />
+        <PlayerSearch view={view} />
+        {view.matchId !== null && <MatchOverview key={view.matchId} matchId={view.matchId} close={() => navigate({ ...view, matchId: null })} />}
       </main>
     </div>
   )

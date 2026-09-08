@@ -3,10 +3,14 @@ import { StatisticsResults } from './StatisticsResults'
 import { RankSelector } from './RankSelector'
 import { useEffect, useState } from 'react'
 import { listRanks, loadSeasonStart } from '../../services/statistics'
-import { defaults, type MetricId, type Preferences } from '../../statistics'
+import { type MetricId, type Preferences } from '../../statistics'
 
-export function HeroStatistics() {
-  const [preferences, setPreferences] = useState<Preferences>(defaults)
+type HeroStatisticsProps = {
+  preferences: Preferences
+  change: (preferences: Preferences) => void
+}
+
+export function HeroStatistics({ preferences, change }: HeroStatisticsProps) {
   const [ranks, setRanks] = useState<Awaited<ReturnType<typeof listRanks>>>([])
   const [seasonStart, setSeasonStart] = useState<number | null>(null)
   const [seasonError, setSeasonError] = useState(false)
@@ -29,7 +33,7 @@ export function HeroStatistics() {
     )
     return () => controller.abort()
   }, [attempt])
-  function update(patch: Partial<Preferences>) { setPreferences((previous) => ({ ...previous, ...patch })) }
+  function update(patch: Partial<Preferences>) { change({ ...preferences, ...patch }) }
   const retry = () => setAttempt((value) => value + 1)
   const requestKey = `${JSON.stringify(preferences.date)}:${preferences.minRank}:${preferences.maxRank}:${preferences.matchMode}:${attempt}`
   function sort(metric: MetricId) {

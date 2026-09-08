@@ -1,37 +1,36 @@
 import { PlayerProfile, PlayerSummary } from './PlayerProfile'
 import { StatisticsFilters } from '../DataDisplay/StatisticsFilters'
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useMemo, useRef, type KeyboardEvent } from 'react'
 import { useResource } from '../../hooks/useResource'
 import { HeroPerformance, Matches, Teammates } from './PlayerDetails'
 import { Status } from './PlayerPresentation'
+import { changePlayerFilters, defaultPlayerView, type PlayerView } from '../../navigation'
 import { filteredHistory, summarizePlayer } from '../../player'
 import { dateBounds, listRanks, loadSeasonStart } from '../../services/statistics'
 import {
-  loadHeroDirectory, loadHistory, loadMates, loadPlayerHeroes, loadPlayerStats, loadProfiles, loadRank, playerDefaults,
-  type AnalyticsHeroStats, type PlayerFilters, type PlayerWindow
+  loadHeroDirectory, loadHistory, loadMates, loadPlayerHeroes, loadPlayerStats, loadProfiles, loadRank,
 } from '../../services/players'
 
 type PlayerDashboardProps = {
-  accountId: number
-  initialStats: AnalyticsHeroStats[]
-  initialWindow: PlayerWindow
+  view: PlayerView
+  change: (view: PlayerView) => void
+  openMatch: (matchId: number) => void
   select: (id: number) => void
   overview: () => void
 }
 
-export function PlayerDashboard({ accountId, initialStats, initialWindow, select, overview }: PlayerDashboardProps) {
-  const [filters, setFilters] = useState<PlayerFilters>(playerDefaults)
-  const [resetVersion, setResetVersion] = useState(0)
-  const [activeTab, setActiveTab] = useState<'matches' | 'heroes'>('matches')
+export function PlayerDashboard({ view, change, openMatch, select, overview }: PlayerDashboardProps) {
+  const { accountId, filters, tab: activeTab } = view
+  function setActiveTab(tab: PlayerView['tab']) { change({ ...view, tab }) }
   const matchTab = useRef<HTMLButtonElement>(null)
   const heroTab = useRef<HTMLButtonElement>(null)
-  const window = useMemo(() => filters.date === playerDefaults.date ? initialWindow : dateBounds(filters.date), [filters.date, initialWindow])
+  const window = useMemo(() => dateBounds(filters.date), [filters.date])
   const profile = useResource(useCallback((signal: AbortSignal) => loadProfiles([accountId], signal), [accountId]))
   const rank = useResource(useCallback((signal: AbortSignal) => loadRank(accountId, signal), [accountId]))
   const ranks = useResource(listRanks)
   const directory = useResource(loadHeroDirectory)
   const season = useResource(loadSeasonStart)
-  const stats = useResource(useCallback((signal: AbortSignal) => loadPlayerStats(accountId, filters, window, signal), [accountId, filters, window]), initialStats)
+  const stats = useResource(useCallback((signal: AbortSignal) => loadPlayerStats(accountId, filters, window, signal), [accountId, filters, window]))
   const details = useResource(useCallback((signal: AbortSignal) => loadPlayerHeroes(accountId, filters, window, signal), [accountId, filters, window]))
   const history = useResource(useCallback((signal: AbortSignal) => loadHistory(accountId, signal), [accountId]))
   const filteredMatches = useMemo(() => history.state.status === 'success' ? filteredHistory(history.state.data, filters, window) : [], [history.state, filters, window])
@@ -41,13 +40,10 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
   const rankData = rank.state.status === 'success' ? rank.state.data : null
   const rankInfo = ranks.state.status === 'success' ? ranks.state.data.find((entry) => entry.tier === rankData?.rank) : undefined
   const seasonStart = season.state.status === 'success' ? season.state.data : null
-  const filterKey = JSON.stringify(filters) + ':' + resetVersion
   const summary = stats.state.status === 'success' ? summarizePlayer(stats.state.data) : null
 
   function resetDashboard() {
-    setFilters(playerDefaults)
-    setActiveTab('matches')
-    setResetVersion((previous) => previous + 1)
+    change(defaultPlayerView(accountId))
   }
 
   function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
@@ -80,7 +76,7 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
         seasonStart={seasonStart}
         dateGroupName="player-date"
         matchGroupName="player-mode"
-        onChange={(patch) => setFilters({ ...filters, ...patch })}
+        onChange={(patch) => change(changePlayerFilters(view, patch))}
       />
     </div>
     {season.state.status === 'error' && <Status resource={season} label="season dates" />}
@@ -123,7 +119,7 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
           hidden={activeTab !== 'matches'}
           tabIndex={0}>
           <Status resource={history} label="match history" />
-          {history.state.status === 'success' && <Matches key={filterKey} allHistory={history.state.data} history={filteredMatches} heroes={heroes} />}
+          {history.state.status === 'success' && <Matches pageIndex={view.matchPage} changePage={(matchPage) => change({ ...view, matchPage })} openMatch={openMatch} allHistory={history.state.data} history={filteredMatches} heroes={heroes} />}
         </section>
         <section
           id="heroes-panel"
@@ -134,7 +130,10 @@ export function PlayerDashboard({ accountId, initialStats, initialWindow, select
           <Status resource={stats} label="hero performance" />
           <Status resource={details} label="playtime and last played" />
           {stats.state.status === 'success' && <HeroPerformance
-            key={filterKey}
+            pageIndex={view.heroPage}
+            sorting={view.sorting}
+            changePage={(heroPage) => change({ ...view, heroPage })}
+            changeSort={(sorting) => change({ ...view, sorting, heroPage: 0 })}
             stats={stats.state.data}
             details={details.state.status === 'success' ? details.state.data : null}
             heroes={heroes} />}

@@ -147,21 +147,36 @@ high-level state, and coordination; avoid generic helper dumping grounds.
 
 - `useResource` identifies requests by loader identity and retry attempt. Keep
   callbacks stable until request inputs change; changing identity starts a load.
-  Account selection seeds initial analytics to avoid fetching them twice.
+  PlayerDashboard alone loads account analytics; search selection only navigates.
 - Superseded searches and section requests must be cancelled, and stale responses
   must not replace newer selections. Supplemental failures preserve usable data.
 - Hidden player tab panels deliberately stay mounted to preserve pagination and
-  sorting. Tab switches do not refetch. Filter/reset keys deliberately reset
-  table state; account selection and Reset default to Recent matches.
+  sorting. Tab switches do not refetch. Committed filter changes reset both pages
+  and hero sorting in the URL; account selection and Reset default to Recent matches.
 - Rank slider drafts belong to `RankSelector`. Commit on pointer release,
   supported keyboard key release, or blur; preserve pointer-cancel recovery.
   The native popover remains anchored and supports outside-click and Escape.
 - Home and player dates default to All time. Home defaults to Phantom+ ranked;
   player filters independently default to ranked + unranked normal games.
-  Filters and identity stay in memory; theme selection alone is persisted.
+  Navigation, filters, sorting, and pagination live in the URL; theme selection
+  alone uses localStorage. Draft search/slider input stays local.
 - Preserve API-backed season selection, metric denominators, missing-value
   handling, historical player heroes, and the teammates match-type exception.
   A structural refactor must not silently change these product semantics.
+
+### URL navigation
+
+- `src/navigation.ts` owns typed query parsing, serialization, defaults, and
+  deterministic page/filter transitions. `src/hooks/useNavigation.ts` connects
+  that state to History API and React through `useSyncExternalStore`.
+- Keep location as the single source of truth. Use `navigate` for committed
+  actions; it skips equivalent states and pushes one history entry per action.
+  Preserve stable date/filter references so unrelated navigation never refetches.
+- MatchOverview is owned by App and loads directly from the match ID, even if
+  player history is loading, empty, filtered out, or unavailable.
+- Query parameters omit defaults; pages are one-based in URLs and zero-based in
+  components. Invalid values fall back without rewriting the URL on mount.
+  Keep home and player filters independent. Season links retain API start times.
 
 ### Stylesheet ownership
 

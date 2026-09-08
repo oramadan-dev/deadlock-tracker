@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export type Resource<T> =
   | { status: 'loading' }
@@ -13,20 +13,15 @@ type ResourceResult<T> = {
 }
 
 // Callers must keep loader identity stable until its request inputs change.
-export function useResource<T>(loader: ResourceLoader<T>, initial?: T) {
-  const seed = useRef({ loader, available: initial !== undefined })
+export function useResource<T>(loader: ResourceLoader<T>) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<ResourceResult<T>>(() => ({
     loader,
     attempt: 0,
-    state: initial === undefined ? { status: 'loading' } : { status: 'success', data: initial },
+    state: { status: 'loading' },
   }))
 
   useEffect(() => {
-    // Account selection has already fetched the initial analytics response.
-    const hasInitialResponse = seed.current.available && loader === seed.current.loader && attempt === 0
-    if (hasInitialResponse) return
-
     const controller = new AbortController()
     loader(controller.signal).then(
       (data) => {

@@ -6,9 +6,13 @@ history, teammates, hero performance, and item usage.
 ## Development
 
 ```sh
-npm install
+pnpm install --frozen-lockfile
 npm run dev
 ```
+
+The API client uses a Git subdirectory dependency supported by the checked-in
+pnpm lockfile; npm cannot currently install that dependency directly. Scripts
+continue to run with npm.
 
 Use `npm run build` for a production build and `npm run lint` to run ESLint.
 
@@ -23,14 +27,14 @@ ranked normal games, with average team badges from Phantom I (91)
 through Eternus VI (116) and at least 100 hero appearances. Date bounds end at
 the latest full hour to reuse cached API results. Rank, time, and match filters
 are shared across requests. A compact rank summary opens the two-handle slider,
-with integer rank notches and API rank icons. Rank range and header sorting reset on refresh or with the Reset button; clicking a header again reverses sorting. Average K/D/A sorts
+with integer rank notches and API rank icons. Rank range and header sorting are restored from the URL on refresh; clicking a header again reverses sorting. Average K/D/A sorts
 by aggregate (kills + assists) / deaths. Date radio controls offer 7 days, 30 days,
 and season to date when the API supplies an active season interval. Overlapping
 intervals use the latest start; missing season metadata does not block statistics.
 Matches offers ranked only or ranked + unranked, retaining average-rank filters.
 The rank popup is anchored below its button and flips above if needed; dragging
-only commits on release. Reset and refresh restore all filters to defaults. The
-100-appearance minimum and default columns are fixed. No table settings are persisted.
+only commits on release. Dashboard Reset restores its defaults; refresh restores the current URL. The
+100-appearance minimum and default columns are fixed.
 
 Win rate is wins / hero appearances. Pick rate is hero appearances / filtered
 games. Recorded ban percentage is recorded bans / filtered games; incomplete
@@ -43,8 +47,8 @@ Sorting operates locally. Win and pick rates use wide green/red bars with both
 percentages labelled at their ends. Ban rate remains numeric; its header tooltip
 explains the recorded-data limitation. Missing ban
 or game totals leave the main table available with unavailable metrics marked.
-Global statistics remain visible during search input and submission, until a
-player successfully loads. Back to overview restores the home statistics.
+Global statistics remain visible during name search; choosing an account opens
+its dashboard, with independent loading and retry states. Back to overview restores the home statistics.
 
 
 ## Player lookup and dashboard
@@ -61,7 +65,7 @@ src/services/players.ts owns player API access. src/player.ts owns identity
 normalization, summary calculations, and deterministic history filtering.
 src/hooks/useResource.ts manages independent loading/error/success states,
 retries, and cancellation; superseded results cannot replace current state.
-Selection and filters remain in memory and refresh returns to the overview.
+Selection and filters are URL-backed; refresh reconstructs the selected view.
 
 The dashboard defaults independently to All time, ranked + unranked normal games,
 with 7-day and API-backed current-season alternatives. No home-page rank or
@@ -119,7 +123,7 @@ Player details use accessible Recent matches / Hero performance tabs, defaulting
 to Recent matches on account selection and Reset. Hidden panels stay mounted so
 switching tabs preserves pagination and hero sorting without new requests. Arrow
 keys and Home/End select and focus tabs. Filter changes still reset pagination.
-Match IDs remain internal; results show green Win / red Loss badges and neutral
+Match IDs appear in shareable URLs; results show green Win / red Loss badges and neutral
 labels for other outcomes. Frequent teammates occupy a 280px left sidebar with
 compact entries and a short date/match-type note, stacking below the panel under 1000px.
 
@@ -208,7 +212,7 @@ When working with the existing CSS:
 
 - `PlayerDashboard.tsx` coordinates filters, independent resources, profile and
   summary presentation, and tab selection. Panels stay mounted when hidden;
-  filter/reset keys intentionally reset their local table state.
+  filter/reset actions intentionally reset their URL-backed table state.
 - `PlayerDetails.tsx` owns hero performance, recent-match pagination and overview
   selection, and the teammate list. `PlayerPresentation.tsx` holds the small
   display components shared by those views and the dashboard.
@@ -216,7 +220,7 @@ When working with the existing CSS:
   identities, filters recorded history, and formats player metrics.
 - `useResource` identifies each request by loader identity and retry attempt.
   Keep request callbacks stable: changing them intentionally starts a new load.
-  Initial analytics are seeded from account selection to avoid duplicate loads.
+  Dashboard analytics load once through this hook; search selection only navigates.
 - `services/matches.ts` keeps participant tag loading separate from its bounded
   worker loop and shares baseline requests by match mode. Partial failures and
   abort checks remain independent of scoreboard metadata.
@@ -279,3 +283,56 @@ components/
 `DataDisplay` contains visual components used by multiple features. Imports name
 files directly; there are no barrel exports. CSS import order remains explicit
 in `App.tsx` to preserve the existing cascade.
+
+## Shareable views and browser history
+
+The app uses query parameters on the existing root path, without a routing
+library or full-page navigation. `src/navigation.ts` parses and serializes typed
+state; `useNavigation` subscribes to location changes with `useSyncExternalStore`.
+Default values are omitted. Home preferences remain in the URL while viewing a
+player so Back to overview restores that configuration.
+
+| Parameters | Meaning and defaults |
+| --- | --- |
+| `player`, `match` | Stable account and match IDs; omitted on the overview |
+| `tab` | `matches` (default) or `heroes` |
+| `date`, `playerDate` | Independent dates: omitted/all, `7d`, `30d`, or `season-<Unix start>` |
+| `mode`, `playerMode` | `ranked` or `all`; home defaults ranked, player defaults all normal games |
+| `minRank`, `maxRank` | Home rank tiers 1–11; defaults 9 and 11 |
+| `sort`, `dir` | Home visible metric and asc/desc; defaults winRate/desc |
+| `page`, `heroPage` | Independent match and hero pages, starting at 1 |
+| `heroSort`, `heroDir` | Hero performance sorting; defaults games/desc |
+
+Examples (illustrative IDs; availability depends on the service):
+
+- `/?player=12345`
+- `/?player=12345&match=987654&page=3`
+- `/?player=12345&tab=heroes&playerDate=30d&playerMode=ranked&heroSort=kda&heroDir=asc&heroPage=2`
+- `/?date=7d&mode=all&minRank=5&maxRank=8&sort=matches`
+- `/?match=987654` (standalone match over the overview)
+
+Committed selections, tabs, filters, sorting, pagination, opening/closing a match,
+and Reset each push a history entry, unless the resulting view is equivalent.
+Back/Forward restores location state through popstate without reloading React.
+Slider drafts only commit on release, supported key release, or blur. Back/Forward
+also restores the slider draft to the committed range. Closing a match preserves
+the underlying tab, pages, and filters and never needs an earlier history entry.
+
+Direct links and refresh load the selected account and filters automatically.
+Match loading does not depend on finding that match in the player's current
+history page, or even on a successful history request. API errors retain retry
+controls. Switching tabs or sort does not refetch unchanged resources.
+
+Malformed IDs, enums, dates, ranks, and pages fall back safely; unknown parameters
+are ignored. Duplicate parameters use the first value. Inverted rank ranges use
+the default range. Out-of-range pages display the last available page (or an empty
+state when there are no rows). URLs aren't rewritten merely on mount; the next
+meaningful navigation writes a canonical query. Older links without optional
+parameters use the normal defaults.
+
+Rolling dates remain relative to the latest complete hour. Season links preserve
+the selected API-provided start timestamp, rather than silently switching to a
+new season. Fetched data can change between visits and is never encoded in a URL.
+Search drafts/results, request state, retries, popovers, focus, carousel animation,
+and copy feedback remain local. Theme alone is saved in localStorage. Fixed
+columns and the 100-appearance minimum have no URL parameters.
