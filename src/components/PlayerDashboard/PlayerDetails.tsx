@@ -34,7 +34,10 @@ export function HeroPerformance({ stats, details, heroes }: { stats: AnalyticsHe
                   setSorting({ key: column.key, direction: sorting.key === column.key && sorting.direction === 'desc' ? 'asc' : 'desc' })
                   setPage(0)
                 }}>
-                {column.label} {sorting.key === column.key ? sorting.direction === 'desc' ? '↓' : '↑' : '↕'}
+                <span className="metric-sort-label">{column.label}</span>
+                {sorting.key === column.key && <span className="metric-sort-indicator" aria-hidden="true">
+                  {sorting.direction === 'desc' ? '↓' : '↑'}
+                </span>}
               </button>
             </th>)}
           </tr>

@@ -87,10 +87,10 @@ function StatisticsTable({ data, preferences, sort }: StatisticsTableProps) {
                   className="metric-sort"
                   onClick={() => sort(metric.id)}
                   title={'hint' in metric ? metric.hint : 'Sort by ' + metric.label}>
-                  {metric.id === 'banRate' ? 'Ban %' : metric.label}
-                  <span aria-hidden="true">
-                    {selected ? arrow : ' ↕'}
-                  </span>
+                  <span className="metric-sort-label">{metric.id === 'banRate' ? 'Ban %' : metric.label}</span>
+                  {selected && <span className="metric-sort-indicator" aria-hidden="true">
+                    {arrow}
+                  </span>}
                 </button>
               </th>
             })}

@@ -40,12 +40,6 @@
   white-space: nowrap;
 }
 
-.statistics-table thead th {
-  font: 700 0.7rem var(--font-display);
-  color: var(--color-page);
-  background: var(--color-surface);
-}
-
 .statistics-position {
   color: var(--color-placeholder);
   min-width: 10px;
@@ -151,7 +145,7 @@
 }
 
 .rate-column {
-  width: 25%;
+  width: 21%;
 }
 
 .ban-column {
@@ -159,15 +153,11 @@
 }
 
 .kda-column {
-  width: 15%;
+  width: 18%;
 }
 
 .appearances-column {
-  width: 10%;
-}
-
-.statistics-table .metric-sort:focus-visible {
-  outline-color: var(--color-page);
+  width: 15%;
 }
 
 .statistics-table th:nth-child(2),
@@ -178,10 +168,6 @@
 .statistics-table th:nth-child(n+4),
 .statistics-table td:nth-child(n+4) {
   text-align: right;
-}
-
-.statistics-table thead .metric-sort {
-  width: 100%;
 }
 
 .statistics-table th:first-child,
